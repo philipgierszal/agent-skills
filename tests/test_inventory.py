@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import hashlib
 import importlib.util
+import json
 import os
 import subprocess
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -36,6 +38,19 @@ class InventoryTests(unittest.TestCase):
         inventory = load_inventory_module()
         self.assertEqual(inventory._decode_path(b"module\\name.py"), "module\\name.py")
 
+    def test_writer_serializes_surrogateescaped_path_bytes(self) -> None:
+        inventory = load_inventory_module()
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "inventory.json"
+            decoded_name = "invalid-\udcff.py"
+            payload = {"inventory_version": 1, "files": [{"path": decoded_name}]}
+            with mock.patch.object(inventory, "build_inventory", return_value=payload):
+                inventory.write_inventory(Path(directory), output)
+
+            restored = json.loads(output.read_text(encoding="utf-8"))
+            self.assertEqual(restored["files"][0]["path"], decoded_name)
+
     @unittest.skipIf(os.name == "nt", "Windows filenames cannot contain backslashes")
     def test_distinguishes_posix_backslash_name_from_directory_separator(self) -> None:
         inventory = load_inventory_module()
@@ -53,6 +68,27 @@ class InventoryTests(unittest.TestCase):
 
             paths = {entry["path"] for entry in inventory.build_inventory(repo)["files"]}
             self.assertEqual(paths, {"a\\b.txt", "a/b.txt"})
+
+    @unittest.skipIf(os.name == "nt", "Windows filenames must be valid Unicode")
+    def test_serializes_non_utf8_posix_path_bytes(self) -> None:
+        inventory = load_inventory_module()
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory) / "repo"
+            repo.mkdir()
+            run_git(repo, "init", "-b", "main")
+            run_git(repo, "config", "user.name", "Audit Test")
+            run_git(repo, "config", "user.email", "audit@example.test")
+            decoded_name = os.fsdecode(b"invalid-\xff.py")
+            (repo / decoded_name).write_bytes(b"print('ok')\n")
+            run_git(repo, "add", decoded_name)
+            run_git(repo, "commit", "-m", "non-utf8 fixture")
+            output = Path(directory) / "inventory.json"
+
+            inventory.write_inventory(repo, output)
+            payload = json.loads(output.read_text(encoding="utf-8"))
+
+            self.assertEqual(payload["files"][0]["path"], decoded_name)
 
     def test_inventories_tracked_and_nonignored_untracked_paths(self) -> None:
         inventory = load_inventory_module()
@@ -193,11 +229,24 @@ class InventoryTests(unittest.TestCase):
                 for item in inventory.build_inventory(repo)["files"]
                 if item["path"] == "conflict.txt"
             )
-            self.assertEqual(entry["worktree_status"], "conflicted")
+            self.assertEqual(entry["index_status"], "conflicted")
+            self.assertEqual(entry["worktree_status"], "present")
             self.assertEqual(
                 {stage["stage"] for stage in entry["index_stages"]},
                 {1, 2, 3},
             )
+
+            path.unlink()
+            missing_entry = next(
+                item
+                for item in inventory.build_inventory(repo)["files"]
+                if item["path"] == "conflict.txt"
+            )
+            self.assertEqual(missing_entry["index_status"], "conflicted")
+            self.assertEqual(missing_entry["worktree_status"], "missing")
+            self.assertEqual(missing_entry["kind"], "missing")
+            self.assertIsNone(missing_entry["size_bytes"])
+            self.assertIsNone(missing_entry["sha256"])
 
     def test_hashes_git_symlink_materialized_as_regular_file(self) -> None:
         inventory = load_inventory_module()
@@ -283,6 +332,53 @@ class InventoryTests(unittest.TestCase):
             self.assertEqual(entry["kind"], "submodule")
             self.assertEqual(entry["git_mode"], "160000")
             self.assertIsNone(entry["sha256"])
+
+    def test_inventory_digest_captures_initialized_submodule_drift(self) -> None:
+        inventory = load_inventory_module()
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            child = root / "child"
+            repo = root / "super"
+            child.mkdir()
+            repo.mkdir()
+            run_git(child, "init", "-b", "main")
+            run_git(child, "config", "user.name", "Audit Test")
+            run_git(child, "config", "user.email", "audit@example.test")
+            (child / "lib.txt").write_text("clean\n", encoding="utf-8")
+            run_git(child, "add", "lib.txt")
+            run_git(child, "commit", "-m", "child fixture")
+            run_git(repo, "init", "-b", "main")
+            run_git(repo, "config", "user.name", "Audit Test")
+            run_git(repo, "config", "user.email", "audit@example.test")
+            run_git(
+                repo,
+                "-c",
+                "protocol.file.allow=always",
+                "submodule",
+                "add",
+                str(child),
+                "vendor/module",
+            )
+            run_git(repo, "commit", "-m", "super fixture")
+
+            before = inventory.build_inventory(repo)
+            (repo / "vendor" / "module" / "lib.txt").write_text(
+                "dirty\n", encoding="utf-8"
+            )
+            after = inventory.build_inventory(repo)
+            before_entry = next(
+                item for item in before["files"] if item["path"] == "vendor/module"
+            )
+            after_entry = next(
+                item for item in after["files"] if item["path"] == "vendor/module"
+            )
+
+            self.assertEqual(before["revision"], after["revision"])
+            self.assertFalse(before_entry["submodule_dirty"])
+            self.assertTrue(after_entry["submodule_dirty"])
+            self.assertEqual(before_entry["submodule_head"], after_entry["submodule_head"])
+            self.assertNotEqual(before["inventory_digest"], after["inventory_digest"])
 
     def test_rejects_non_git_directory(self) -> None:
         inventory = load_inventory_module()

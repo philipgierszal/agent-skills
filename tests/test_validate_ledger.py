@@ -61,6 +61,7 @@ def valid_ledger() -> dict[str, object]:
                         "evidence": ["README.md:usage"],
                         "confidence": "direct",
                         "scopes": ["development"],
+                        "variants": ["default"],
                     }
                 ],
                 "unresolved_dynamic_references": [],
@@ -234,6 +235,7 @@ class LedgerValidationTests(unittest.TestCase):
                 "evidence": [],
                 "confidence": "guess",
                 "scopes": [],
+                "variants": [],
             }
         ]
 
@@ -354,7 +356,7 @@ class LedgerValidationTests(unittest.TestCase):
         ):
             validator.validate(valid_inventory(), ledger)
 
-    def test_relations_require_unique_ids(self) -> None:
+    def test_relations_require_ids(self) -> None:
         validator = load_validator_module()
         ledger = valid_ledger()
         relation = ledger["files"][0]["relations"][0]
@@ -365,6 +367,78 @@ class LedgerValidationTests(unittest.TestCase):
             r"relation\[0\] requires id",
         ):
             validator.validate(valid_inventory(), ledger)
+
+    def test_relation_ids_are_unique_across_the_ledger(self) -> None:
+        validator = load_validator_module()
+        ledger = valid_ledger()
+        ledger["files"][1]["relations"] = [
+            {
+                "id": "readme-documents-main",
+                "kind": "registration",
+                "target": "runtime-registry",
+                "target_type": "external",
+                "evidence": ["src/main.py:1"],
+                "confidence": "direct",
+                "scopes": ["production"],
+                "variants": ["default"],
+            }
+        ]
+
+        with self.assertRaisesRegex(
+            validator.LedgerValidationError,
+            "duplicates relation id: readme-documents-main",
+        ):
+            validator.validate(valid_inventory(), ledger)
+
+    def test_architecture_findings_can_reference_any_ledger_relation(self) -> None:
+        validator = load_validator_module()
+        ledger = valid_ledger()
+        ledger["files"][1]["findings"] = [
+            {
+                "class": "architecture-violation",
+                "subject": "src/main.py",
+                "location": "src/main.py:1",
+                "scopes": ["development"],
+                "variants": ["default"],
+                "summary": "Observed edge violates the fixture policy",
+                "evidence": ["README.md:usage"],
+                "counter_evidence_checked": ["policy exceptions evaluated"],
+                "confidence_rationale": "The typed edge matches an explicit rule",
+                "action": "Remove or exempt the edge",
+                "policy_rule": "fixture-rule",
+                "relation_refs": ["readme-documents-main"],
+            }
+        ]
+
+        self.assertIsNone(validator.validate(valid_inventory(), ledger))
+
+    def test_architecture_relation_must_cover_finding_scope_and_variant(self) -> None:
+        validator = load_validator_module()
+        ledger = valid_ledger()
+        ledger["files"][1]["findings"] = [
+            {
+                "class": "architecture-violation",
+                "subject": "src/main.py",
+                "location": "src/main.py:1",
+                "scopes": ["production"],
+                "variants": ["default", "linux"],
+                "summary": "Observed edge violates the fixture policy",
+                "evidence": ["README.md:usage"],
+                "counter_evidence_checked": ["policy exceptions evaluated"],
+                "confidence_rationale": "The typed edge matches an explicit rule",
+                "action": "Remove or exempt the edge",
+                "policy_rule": "fixture-rule",
+                "relation_refs": ["readme-documents-main"],
+            }
+        ]
+        ledger["variants_analyzed"] = ["default", "linux"]
+
+        with self.assertRaises(validator.LedgerValidationError) as raised:
+            validator.validate(valid_inventory(), ledger)
+
+        message = str(raised.exception)
+        self.assertIn("does not cover finding scopes: production", message)
+        self.assertIn("does not cover finding variants: linux", message)
 
 
 if __name__ == "__main__":
