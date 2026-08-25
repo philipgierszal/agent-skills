@@ -75,6 +75,9 @@ def _validate_finding(
     path: str,
     index: int,
     unresolved: list[str],
+    relation_ids: set[str],
+    analyzed_variants: set[str],
+    unresolved_channels: list[dict[str, object]],
     errors: list[str],
 ) -> None:
     prefix = f"{path} finding[{index}]"
@@ -94,6 +97,20 @@ def _validate_finding(
     if not _nonempty_strings(finding.get("evidence")):
         errors.append(f"{prefix} finding requires evidence")
 
+    scopes_value = finding.get("scopes")
+    if not _nonempty_strings(scopes_value):
+        errors.append(f"{prefix} finding requires scopes")
+        scopes: list[str] = []
+    else:
+        scopes = scopes_value
+
+    variants_value = finding.get("variants")
+    if not _nonempty_strings(variants_value):
+        errors.append(f"{prefix} finding requires variants")
+        variants: list[str] = []
+    else:
+        variants = variants_value
+
     counter_evidence = finding.get("counter_evidence_checked")
     if not _string_list(counter_evidence):
         errors.append(f"{prefix} counter_evidence_checked must be a list of strings")
@@ -106,11 +123,29 @@ def _validate_finding(
             )
         if not counter_evidence:
             errors.append(f"{path} {finding_class} requires counter_evidence_checked")
+        for variant in sorted(set(variants) - analyzed_variants):
+            errors.append(f"{path} {finding_class} uses unanalyzed variant: {variant}")
+        for gap in unresolved_channels:
+            gap_scopes = set(gap["scopes"])
+            gap_variants = set(gap["variants"])
+            scopes_overlap = "all" in gap_scopes or bool(gap_scopes.intersection(scopes))
+            variants_overlap = "all" in gap_variants or bool(gap_variants.intersection(variants))
+            if scopes_overlap and variants_overlap:
+                errors.append(
+                    f"{path} {finding_class} overlaps unresolved channel: {gap['channel']}"
+                )
 
     if finding_class == "architecture-violation":
         rule = finding.get("policy_rule")
         if not isinstance(rule, str) or not rule.strip():
             errors.append(f"{prefix} architecture-violation requires policy_rule")
+        relation_refs = finding.get("relation_refs")
+        if not _nonempty_strings(relation_refs):
+            errors.append(f"{prefix} architecture-violation requires relation_refs")
+        else:
+            for relation_ref in relation_refs:
+                if relation_ref not in relation_ids:
+                    errors.append(f"{prefix} references unknown relation id: {relation_ref}")
 
 
 def _validate_relation(
@@ -118,12 +153,21 @@ def _validate_relation(
     path: str,
     index: int,
     inventory_paths: set[str],
+    relation_ids: set[str],
     errors: list[str],
 ) -> None:
     prefix = f"{path} relation[{index}]"
     if not isinstance(relation, dict):
         errors.append(f"{prefix} must be an object")
         return
+
+    relation_id = relation.get("id")
+    if not isinstance(relation_id, str) or not relation_id.strip():
+        errors.append(f"{prefix} requires id")
+    elif relation_id in relation_ids:
+        errors.append(f"{prefix} duplicates relation id: {relation_id}")
+    else:
+        relation_ids.add(relation_id)
 
     kind = relation.get("kind")
     if not isinstance(kind, str) or not kind.strip():
@@ -154,6 +198,8 @@ def _validate_file(
     record: object,
     index: int,
     inventory_paths: set[str],
+    analyzed_variants: set[str],
+    unresolved_channels: list[dict[str, object]],
     errors: list[str],
 ) -> None:
     if not isinstance(record, dict):
@@ -179,11 +225,19 @@ def _validate_file(
         errors.append(f"{path} requires evidence")
 
     relations = record.get("relations")
+    relation_ids: set[str] = set()
     if not isinstance(relations, list):
         errors.append(f"{path} relations must be a list")
     else:
         for relation_index, relation in enumerate(relations):
-            _validate_relation(relation, path, relation_index, inventory_paths, errors)
+            _validate_relation(
+                relation,
+                path,
+                relation_index,
+                inventory_paths,
+                relation_ids,
+                errors,
+            )
 
     if review_status in {"metadata-only", "excluded"}:
         rationale = record.get("review_rationale")
@@ -202,7 +256,48 @@ def _validate_file(
         errors.append(f"{path} findings must be a list")
         return
     for finding_index, finding in enumerate(findings):
-        _validate_finding(finding, path, finding_index, unresolved, errors)
+        _validate_finding(
+            finding,
+            path,
+            finding_index,
+            unresolved,
+            relation_ids,
+            analyzed_variants,
+            unresolved_channels,
+            errors,
+        )
+
+
+def _validate_unresolved_channels(
+    value: object,
+    errors: list[str],
+) -> list[dict[str, object]]:
+    if not isinstance(value, list):
+        errors.append("unresolved_channels must be a list")
+        return []
+
+    valid_channels: list[dict[str, object]] = []
+    for index, channel in enumerate(value):
+        prefix = f"unresolved_channels[{index}]"
+        if not isinstance(channel, dict):
+            errors.append(f"{prefix} must be an object")
+            continue
+        name = channel.get("channel")
+        scopes = channel.get("scopes")
+        variants = channel.get("variants")
+        valid = True
+        if not isinstance(name, str) or not name.strip():
+            errors.append(f"{prefix} requires channel")
+            valid = False
+        if not _nonempty_strings(scopes):
+            errors.append(f"{prefix} requires scopes")
+            valid = False
+        if not _nonempty_strings(variants):
+            errors.append(f"{prefix} requires variants")
+            valid = False
+        if valid:
+            valid_channels.append(channel)
+    return valid_channels
 
 
 def validate(inventory: dict[str, object], ledger: dict[str, object]) -> None:
@@ -233,8 +328,13 @@ def validate(inventory: dict[str, object], ledger: dict[str, object]) -> None:
     variants = ledger.get("variants_analyzed")
     if not _nonempty_strings(variants):
         errors.append("variants_analyzed must contain at least one named variant")
-    if not _string_list(ledger.get("unresolved_channels")):
-        errors.append("unresolved_channels must be a list of strings")
+        analyzed_variants: set[str] = set()
+    else:
+        analyzed_variants = set(variants)
+    unresolved_channels = _validate_unresolved_channels(
+        ledger.get("unresolved_channels"),
+        errors,
+    )
 
     inventory_paths = _paths(inventory, "inventory", errors)
     ledger_paths = _paths(ledger, "ledger", errors)
@@ -256,7 +356,14 @@ def validate(inventory: dict[str, object], ledger: dict[str, object]) -> None:
     records = ledger.get("files")
     if isinstance(records, list):
         for index, record in enumerate(records):
-            _validate_file(record, index, inventory_set, errors)
+            _validate_file(
+                record,
+                index,
+                inventory_set,
+                analyzed_variants,
+                unresolved_channels,
+                errors,
+            )
 
     if errors:
         raise LedgerValidationError(errors)
