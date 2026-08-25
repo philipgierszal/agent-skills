@@ -121,7 +121,7 @@ def _validate_finding(
             errors.append(
                 f"{path} {finding_class} cannot retain unresolved dynamic references"
             )
-        if not counter_evidence:
+        if not _nonempty_strings(counter_evidence):
             errors.append(f"{path} {finding_class} requires counter_evidence_checked")
         for variant in sorted(set(variants) - analyzed_variants):
             errors.append(f"{path} {finding_class} uses unanalyzed variant: {variant}")
