@@ -121,7 +121,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     # --repo and --output; print a specific error and return 2 on InventoryError
 ```
 
-Use `git -C <repo> ls-files --cached --others --exclude-standard -z` and parse bytes on NUL boundaries. Determine tracked paths from a separate cached query and Git modes from `git ls-files --stage -z`. Normalize paths to POSIX form, sort paths, record `tracked`, `git_mode`, `kind`, `size_bytes`, and SHA-256. Record `revision` and dirty state. Treat mode `160000` as `submodule` and symlinks explicitly. Never descend through path text returned by another shell.
+Use NUL-safe Git output and parse bytes on NUL boundaries. Inventory the union of HEAD (`git ls-tree`), all index stages (`git ls-files --stage`), and non-ignored untracked paths. Sort paths without rewriting legal path bytes. Record `tracked_at_head`, `head_entry`, `git_object`, `index_stages`, `worktree_status` (`present`, `missing`, or `conflicted`), `git_mode`, `kind`, `size_bytes`, and SHA-256 where content exists. Compute a canonical `inventory_digest` over the complete file metadata so same-HEAD drift is detectable. Treat mode `160000` as `submodule`; distinguish actual symlinks from Git symlinks materialized as regular files. Never descend through path text returned by another shell.
 
 - [ ] **Step 2: Run inventory tests and verify GREEN**
 

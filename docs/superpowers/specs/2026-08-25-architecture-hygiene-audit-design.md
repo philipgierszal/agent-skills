@@ -45,9 +45,9 @@ agent-skills/
 
 `SKILL.md` is a concise orchestrator. It defines the scope contract, audit phases, safety boundary, confidence rules, and report completion gate. Detailed schemas and ecosystem-specific guidance are progressively disclosed through one-level references.
 
-`inventory.py` creates a deterministic, NUL-safe JSON inventory from Git. It records repository-relative paths and enough metadata to detect drift between inventory and audit. It treats submodules and symlinks explicitly and fails clearly outside a Git worktree.
+`inventory.py` creates a deterministic, NUL-safe JSON inventory from Git. It inventories the union of HEAD, all index stages, and non-ignored untracked files, so staged/unstaged deletions and merge conflicts stay visible. Each path records HEAD/index identity, worktree state, kind, size, and content hash where applicable; submodules, real symlinks, and platform-materialized Git symlinks are distinct. A canonical inventory digest detects worktree or index drift even when HEAD is unchanged. The helper fails clearly outside a Git worktree.
 
-`validate_ledger.py` validates the completed machine-readable ledger against the inventory. It rejects missing paths, duplicate paths, unexpected paths, invalid dispositions, empty evidence for findings, and unacknowledged unresolved references. Its purpose is coverage proof, not semantic dead-code detection.
+`validate_ledger.py` validates the completed machine-readable ledger against the inventory. It rejects revision or inventory-digest drift, missing, duplicate, or unexpected paths, invalid dispositions, empty evidence, ambiguous relation references, and high-certainty claims whose affected scope/variant overlaps an unresolved channel. Its purpose is coverage and evidence-contract proof, not semantic dead-code detection.
 
 The agent remains responsible for discovering root sets and build variants, choosing native analyzers, interpreting their output, reviewing dynamic channels, constructing typed relations, and writing findings. It must downgrade confidence when tooling or runtime evidence is incomplete rather than imitate a compiler with text search.
 
@@ -80,7 +80,7 @@ When no policy exists, inferred boundaries are proposals rather than violations.
 ## Failure Handling
 
 - Outside a Git repository: stop and report the required precondition.
-- Dirty repository: record tracked/untracked state; do not modify source files.
+- Dirty repository: preserve present, deleted, conflicted, staged, unstaged, and untracked path states in the inventory; do not modify source files.
 - Analyzer unavailable or failing: record the failure and downgrade affected findings.
 - Unsupported syntax or ecosystem: retain paths as reviewed/unknown, never as clean.
 - Incomplete roots, variants, or dynamic behavior: expose the gap and block a “zero dead code” claim.

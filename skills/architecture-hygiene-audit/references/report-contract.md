@@ -24,8 +24,15 @@ This example is complete for one path; real ledgers contain exactly one row for 
 {
   "ledger_version": 1,
   "inventory_revision": "0123456789abcdef",
+  "inventory_digest": "sha256-of-canonical-inventory-files",
   "variants_analyzed": ["production/windows-x64", "full-repository/windows-x64"],
-  "unresolved_channels": ["Linux deployment variant was not available"],
+  "unresolved_channels": [
+    {
+      "channel": "Linux deployment variant was not available",
+      "scopes": ["deployment"],
+      "variants": ["production/linux-x64"]
+    }
+  ],
   "files": [
     {
       "path": "src/orders/validate.ts",
@@ -35,6 +42,7 @@ This example is complete for one path; real ledgers contain exactly one row for 
       "evidence": ["knip-full.json", "src/orders/submit.ts:14"],
       "relations": [
         {
+          "id": "validate-imports-order-types",
           "kind": "import",
           "target": "src/orders/types.ts",
           "target_type": "file",
@@ -49,6 +57,8 @@ This example is complete for one path; real ledgers contain exactly one row for 
           "class": "design-smell",
           "subject": "src/orders/validate.ts::validateOrder",
           "location": "src/orders/validate.ts:8",
+          "scopes": ["production"],
+          "variants": ["production/windows-x64"],
           "summary": "Validation duplicates syntax but represents Order-specific knowledge",
           "evidence": ["src/returns/validate.ts:7", "CONTEXT.md:Order"],
           "counter_evidence_checked": ["The rules have different owners and change histories"],
@@ -61,7 +71,7 @@ This example is complete for one path; real ledgers contain exactly one row for 
 }
 ```
 
-For `metadata-only` or `excluded`, add a non-empty `review_rationale`. For `architecture-violation`, add `policy_rule`. Every finding requires a source-located subject, including unused methods and exports.
+Copy `revision` and `inventory_digest` from `inventory.json`; validation rejects either mismatch, including content drift at the same Git revision. Give every relation a unique non-empty `id`. For `metadata-only` or `excluded`, add a non-empty `review_rationale`. For `architecture-violation`, add `policy_rule` and `relation_refs` containing existing relation IDs. Every finding requires affected `scopes`, analyzed `variants`, and a source-located subject, including unused methods and exports. Each unresolved channel is an object with a description plus affected scopes and variants; use `all` only when the gap truly crosses the entire audit.
 
 ## Human report
 
