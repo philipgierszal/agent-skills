@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import os
 import subprocess
@@ -197,6 +198,91 @@ class InventoryTests(unittest.TestCase):
                 {stage["stage"] for stage in entry["index_stages"]},
                 {1, 2, 3},
             )
+
+    def test_hashes_git_symlink_materialized_as_regular_file(self) -> None:
+        inventory = load_inventory_module()
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            run_git(repo, "init", "-b", "main")
+            run_git(repo, "config", "user.name", "Audit Test")
+            run_git(repo, "config", "user.email", "audit@example.test")
+            (repo / "link").write_text("target.txt", encoding="utf-8")
+            blob = subprocess.run(
+                ["git", "-C", str(repo), "hash-object", "-w", "--stdin"],
+                input=b"target.txt",
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            ).stdout.decode("ascii").strip()
+            run_git(repo, "update-index", "--add", "--cacheinfo", "120000", blob, "link")
+            run_git(repo, "commit", "-m", "symlink fixture")
+
+            entry = inventory.build_inventory(repo)["files"][0]
+            self.assertEqual(entry["git_mode"], "120000")
+            self.assertEqual(entry["kind"], "symlink-materialized")
+            self.assertEqual(entry["worktree_status"], "present")
+            self.assertEqual(entry["sha256"], hashlib.sha256(b"target.txt").hexdigest())
+
+    def test_hashes_actual_symlink_target_without_following_it(self) -> None:
+        inventory = load_inventory_module()
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            run_git(repo, "init", "-b", "main")
+            run_git(repo, "config", "user.name", "Audit Test")
+            run_git(repo, "config", "user.email", "audit@example.test")
+            (repo / "target.txt").write_text("secret target contents\n", encoding="utf-8")
+            try:
+                os.symlink("target.txt", repo / "link")
+            except OSError as error:
+                self.skipTest(f"OS symlink creation unavailable: {error}")
+            run_git(repo, "add", "target.txt", "link")
+            run_git(repo, "commit", "-m", "symlink fixture")
+
+            entry = next(
+                item for item in inventory.build_inventory(repo)["files"] if item["path"] == "link"
+            )
+            self.assertEqual(entry["kind"], "symlink")
+            self.assertEqual(entry["sha256"], hashlib.sha256(b"target.txt").hexdigest())
+
+    def test_represents_present_gitlink_as_submodule(self) -> None:
+        inventory = load_inventory_module()
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            run_git(repo, "init", "-b", "main")
+            run_git(repo, "config", "user.name", "Audit Test")
+            run_git(repo, "config", "user.email", "audit@example.test")
+            (repo / "root.txt").write_text("root\n", encoding="utf-8")
+            run_git(repo, "add", "root.txt")
+            run_git(repo, "commit", "-m", "root")
+            head = subprocess.run(
+                ["git", "-C", str(repo), "rev-parse", "HEAD"],
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            ).stdout.decode("ascii").strip()
+            run_git(
+                repo,
+                "update-index",
+                "--add",
+                "--cacheinfo",
+                "160000",
+                head,
+                "vendor/module",
+            )
+            run_git(repo, "commit", "-m", "gitlink fixture")
+            (repo / "vendor" / "module").mkdir(parents=True)
+
+            entry = next(
+                item
+                for item in inventory.build_inventory(repo)["files"]
+                if item["path"] == "vendor/module"
+            )
+            self.assertEqual(entry["kind"], "submodule")
+            self.assertEqual(entry["git_mode"], "160000")
+            self.assertIsNone(entry["sha256"])
 
     def test_rejects_non_git_directory(self) -> None:
         inventory = load_inventory_module()
