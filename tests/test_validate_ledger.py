@@ -171,6 +171,30 @@ class LedgerValidationTests(unittest.TestCase):
         self.assertIn("confirmed-unreachable cannot retain unresolved dynamic references", message)
         self.assertIn("confirmed-unreachable requires counter_evidence_checked", message)
 
+    def test_high_certainty_finding_rejects_blank_counter_evidence(self) -> None:
+        validator = load_validator_module()
+        ledger = valid_ledger()
+        ledger["files"][1]["findings"] = [
+            {
+                "class": "high-confidence-unused",
+                "subject": "src/main.py::unused",
+                "location": "src/main.py:12",
+                "scopes": ["production"],
+                "variants": ["default"],
+                "summary": "Private symbol has no discovered callers",
+                "evidence": ["analyzer:src/main.py:12"],
+                "counter_evidence_checked": ["", "   "],
+                "confidence_rationale": "Static graph and analyzer agree",
+                "action": "Review before removal",
+            }
+        ]
+
+        with self.assertRaisesRegex(
+            validator.LedgerValidationError,
+            "high-confidence-unused requires counter_evidence_checked",
+        ):
+            validator.validate(valid_inventory(), ledger)
+
     def test_rejects_unknown_finding_class_and_incomplete_finding(self) -> None:
         validator = load_validator_module()
         ledger = valid_ledger()
