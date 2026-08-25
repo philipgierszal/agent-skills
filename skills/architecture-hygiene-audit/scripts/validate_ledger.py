@@ -221,6 +221,15 @@ def validate(inventory: dict[str, object], ledger: dict[str, object]) -> None:
             f"inventory revision mismatch: inventory={inventory_revision!r}, ledger={ledger_revision!r}"
         )
 
+    inventory_digest = inventory.get("inventory_digest")
+    ledger_digest = ledger.get("inventory_digest")
+    if not isinstance(inventory_digest, str) or not inventory_digest:
+        errors.append("inventory requires inventory_digest")
+    if inventory_digest != ledger_digest:
+        errors.append(
+            f"inventory digest mismatch: inventory={inventory_digest!r}, ledger={ledger_digest!r}"
+        )
+
     variants = ledger.get("variants_analyzed")
     if not _nonempty_strings(variants):
         errors.append("variants_analyzed must contain at least one named variant")

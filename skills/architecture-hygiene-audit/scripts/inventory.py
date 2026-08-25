@@ -125,9 +125,13 @@ def build_inventory(repo: Path) -> dict[str, object]:
     revision_output = _run_git(root, "rev-parse", "HEAD", allow_failure=True)
     revision = revision_output.decode("ascii", errors="replace").strip() or None
     dirty = bool(_run_git(root, "status", "--porcelain=v1", "-z", "--untracked-files=normal"))
+    inventory_digest = hashlib.sha256(
+        json.dumps(files, sort_keys=True, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
 
     return {
         "inventory_version": 1,
+        "inventory_digest": inventory_digest,
         "repository_root": root.as_posix(),
         "revision": revision,
         "dirty": dirty,
