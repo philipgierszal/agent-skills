@@ -27,6 +27,8 @@ HIGH_CERTAINTY = {
     "high-confidence-unused",
     "architecture-violation",
 }
+RELATION_TARGET_TYPES = {"file", "symbol", "external", "pattern"}
+RELATION_CONFIDENCE = {"direct", "declared", "inferred", "observed"}
 
 
 class LedgerValidationError(ValueError):
@@ -111,7 +113,49 @@ def _validate_finding(
             errors.append(f"{prefix} architecture-violation requires policy_rule")
 
 
-def _validate_file(record: object, index: int, errors: list[str]) -> None:
+def _validate_relation(
+    relation: object,
+    path: str,
+    index: int,
+    inventory_paths: set[str],
+    errors: list[str],
+) -> None:
+    prefix = f"{path} relation[{index}]"
+    if not isinstance(relation, dict):
+        errors.append(f"{prefix} must be an object")
+        return
+
+    kind = relation.get("kind")
+    if not isinstance(kind, str) or not kind.strip():
+        errors.append(f"{prefix} requires kind")
+
+    target = relation.get("target")
+    if not isinstance(target, str) or not target.strip():
+        errors.append(f"{prefix} requires target")
+
+    target_type = relation.get("target_type")
+    if target_type not in RELATION_TARGET_TYPES:
+        errors.append(f"{prefix} has invalid target_type: {target_type!r}")
+    elif target_type == "file" and isinstance(target, str) and target not in inventory_paths:
+        errors.append(f"{prefix} references missing inventory path: {target}")
+
+    if not _nonempty_strings(relation.get("evidence")):
+        errors.append(f"{prefix} requires evidence")
+
+    confidence = relation.get("confidence")
+    if confidence not in RELATION_CONFIDENCE:
+        errors.append(f"{prefix} has invalid confidence: {confidence!r}")
+
+    if not _nonempty_strings(relation.get("scopes")):
+        errors.append(f"{prefix} requires scopes")
+
+
+def _validate_file(
+    record: object,
+    index: int,
+    inventory_paths: set[str],
+    errors: list[str],
+) -> None:
     if not isinstance(record, dict):
         return
 
@@ -133,6 +177,13 @@ def _validate_file(record: object, index: int, errors: list[str]) -> None:
 
     if not _nonempty_strings(record.get("evidence")):
         errors.append(f"{path} requires evidence")
+
+    relations = record.get("relations")
+    if not isinstance(relations, list):
+        errors.append(f"{path} relations must be a list")
+    else:
+        for relation_index, relation in enumerate(relations):
+            _validate_relation(relation, path, relation_index, inventory_paths, errors)
 
     if review_status in {"metadata-only", "excluded"}:
         rationale = record.get("review_rationale")
@@ -196,7 +247,7 @@ def validate(inventory: dict[str, object], ledger: dict[str, object]) -> None:
     records = ledger.get("files")
     if isinstance(records, list):
         for index, record in enumerate(records):
-            _validate_file(record, index, errors)
+            _validate_file(record, index, inventory_set, errors)
 
     if errors:
         raise LedgerValidationError(errors)
