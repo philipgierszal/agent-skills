@@ -1,0 +1,7 @@
+interface:
+  display_name: "Architecture Hygiene Audit"
+  short_description: "Audit architecture and dead-code evidence"
+  default_prompt: "Use $architecture-hygiene-audit to audit this repository exhaustively."
+
+policy:
+  allow_implicit_invocation: true
