@@ -130,6 +130,74 @@ class InventoryTests(unittest.TestCase):
             self.assertEqual(before["revision"], after["revision"])
             self.assertNotEqual(before["inventory_digest"], after["inventory_digest"])
 
+    def test_represents_staged_and_unstaged_deleted_tracked_paths(self) -> None:
+        inventory = load_inventory_module()
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            run_git(repo, "init", "-b", "main")
+            run_git(repo, "config", "user.name", "Audit Test")
+            run_git(repo, "config", "user.email", "audit@example.test")
+            (repo / "staged.txt").write_text("staged\n", encoding="utf-8")
+            (repo / "unstaged.txt").write_text("unstaged\n", encoding="utf-8")
+            run_git(repo, "add", "staged.txt", "unstaged.txt")
+            run_git(repo, "commit", "-m", "fixture")
+
+            (repo / "unstaged.txt").unlink()
+            run_git(repo, "rm", "staged.txt")
+
+            files = {
+                entry["path"]: entry for entry in inventory.build_inventory(repo)["files"]
+            }
+            self.assertEqual(set(files), {"staged.txt", "unstaged.txt"})
+            self.assertEqual(files["staged.txt"]["worktree_status"], "missing")
+            self.assertEqual(files["unstaged.txt"]["worktree_status"], "missing")
+            self.assertFalse(files["staged.txt"]["tracked"])
+            self.assertTrue(files["unstaged.txt"]["tracked"])
+            self.assertTrue(files["staged.txt"]["tracked_at_head"])
+            self.assertTrue(files["unstaged.txt"]["tracked_at_head"])
+            self.assertTrue(files["staged.txt"]["git_object"])
+            self.assertTrue(files["unstaged.txt"]["git_object"])
+            self.assertIsNone(files["staged.txt"]["sha256"])
+            self.assertIsNone(files["unstaged.txt"]["sha256"])
+
+    def test_represents_unmerged_index_stages(self) -> None:
+        inventory = load_inventory_module()
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            run_git(repo, "init", "-b", "main")
+            run_git(repo, "config", "user.name", "Audit Test")
+            run_git(repo, "config", "user.email", "audit@example.test")
+            path = repo / "conflict.txt"
+            path.write_text("base\n", encoding="utf-8")
+            run_git(repo, "add", "conflict.txt")
+            run_git(repo, "commit", "-m", "base")
+            run_git(repo, "checkout", "-b", "side")
+            path.write_text("side\n", encoding="utf-8")
+            run_git(repo, "commit", "-am", "side")
+            run_git(repo, "checkout", "main")
+            path.write_text("main\n", encoding="utf-8")
+            run_git(repo, "commit", "-am", "main")
+            merge = subprocess.run(
+                ["git", "-C", str(repo), "merge", "side"],
+                check=False,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+            )
+            self.assertNotEqual(merge.returncode, 0)
+
+            entry = next(
+                item
+                for item in inventory.build_inventory(repo)["files"]
+                if item["path"] == "conflict.txt"
+            )
+            self.assertEqual(entry["worktree_status"], "conflicted")
+            self.assertEqual(
+                {stage["stage"] for stage in entry["index_stages"]},
+                {1, 2, 3},
+            )
+
     def test_rejects_non_git_directory(self) -> None:
         inventory = load_inventory_module()
 
