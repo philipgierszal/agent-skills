@@ -54,6 +54,7 @@ def valid_ledger() -> dict[str, object]:
                 "evidence": ["manual:README headings and links"],
                 "relations": [
                     {
+                        "id": "readme-documents-main",
                         "kind": "documents",
                         "target": "src/main.py",
                         "target_type": "file",
@@ -153,6 +154,8 @@ class LedgerValidationTests(unittest.TestCase):
                 "class": "confirmed-unreachable",
                 "subject": "src/main.py::main",
                 "location": "src/main.py:1",
+                "scopes": ["production"],
+                "variants": ["default"],
                 "summary": "Entrypoint appears unused",
                 "evidence": ["vulture:src/main.py:1"],
                 "counter_evidence_checked": [],
@@ -176,6 +179,8 @@ class LedgerValidationTests(unittest.TestCase):
                 "class": "definitely-dead",
                 "subject": "src/main.py::main",
                 "location": "src/main.py:1",
+                "scopes": ["production"],
+                "variants": ["default"],
                 "summary": "No callers",
                 "evidence": [],
                 "counter_evidence_checked": [],
@@ -198,6 +203,7 @@ class LedgerValidationTests(unittest.TestCase):
         ledger = valid_ledger()
         ledger["files"][0]["relations"] = [
             {
+                "id": "readme-to-missing",
                 "kind": "",
                 "target": "src/missing.py",
                 "target_type": "file",
@@ -225,6 +231,8 @@ class LedgerValidationTests(unittest.TestCase):
                 "class": "design-smell",
                 "subject": "",
                 "location": "",
+                "scopes": ["production"],
+                "variants": ["default"],
                 "summary": "Entrypoint mixes orchestration and policy",
                 "evidence": ["manual:src/main.py:1-20"],
                 "counter_evidence_checked": [],
@@ -239,6 +247,100 @@ class LedgerValidationTests(unittest.TestCase):
         message = str(raised.exception)
         self.assertIn("finding requires subject", message)
         self.assertIn("finding requires location", message)
+
+    def test_findings_require_scopes_and_variants(self) -> None:
+        validator = load_validator_module()
+        ledger = valid_ledger()
+        ledger["files"][1]["findings"] = [
+            {
+                "class": "design-smell",
+                "subject": "src/main.py::main",
+                "location": "src/main.py:1",
+                "scopes": [],
+                "variants": [],
+                "summary": "Entrypoint mixes orchestration and policy",
+                "evidence": ["manual:src/main.py:1-20"],
+                "counter_evidence_checked": [],
+                "confidence_rationale": "Responsibilities change independently",
+                "action": "Review the module seam with maintainers",
+            }
+        ]
+
+        with self.assertRaises(validator.LedgerValidationError) as raised:
+            validator.validate(valid_inventory(), ledger)
+
+        message = str(raised.exception)
+        self.assertIn("finding requires scopes", message)
+        self.assertIn("finding requires variants", message)
+
+    def test_high_certainty_finding_rejects_overlapping_unresolved_channel(self) -> None:
+        validator = load_validator_module()
+        ledger = valid_ledger()
+        ledger["unresolved_channels"] = [
+            {
+                "channel": "dynamic plugin registry",
+                "scopes": ["production"],
+                "variants": ["default"],
+            }
+        ]
+        ledger["files"][1]["findings"] = [
+            {
+                "class": "high-confidence-unused",
+                "subject": "src/main.py::unused",
+                "location": "src/main.py:12",
+                "scopes": ["production"],
+                "variants": ["default"],
+                "summary": "Private symbol has no discovered callers",
+                "evidence": ["analyzer:src/main.py:12"],
+                "counter_evidence_checked": ["package manifests inspected"],
+                "confidence_rationale": "Static graph and analyzer agree",
+                "action": "Close plugin registry gap before removal review",
+            }
+        ]
+
+        with self.assertRaisesRegex(
+            validator.LedgerValidationError,
+            "overlaps unresolved channel: dynamic plugin registry",
+        ):
+            validator.validate(valid_inventory(), ledger)
+
+    def test_architecture_violation_requires_an_existing_relation_reference(self) -> None:
+        validator = load_validator_module()
+        ledger = valid_ledger()
+        ledger["files"][0]["findings"] = [
+            {
+                "class": "architecture-violation",
+                "subject": "README.md",
+                "location": "README.md:1",
+                "scopes": ["production"],
+                "variants": ["default"],
+                "summary": "Documentation edge violates a fixture policy",
+                "evidence": ["README.md:1"],
+                "counter_evidence_checked": ["exceptions evaluated"],
+                "confidence_rationale": "Observed edge matches explicit rule",
+                "action": "Remove the forbidden edge",
+                "policy_rule": "fixture-rule",
+                "relation_refs": ["missing-relation"],
+            }
+        ]
+
+        with self.assertRaisesRegex(
+            validator.LedgerValidationError,
+            "references unknown relation id: missing-relation",
+        ):
+            validator.validate(valid_inventory(), ledger)
+
+    def test_relations_require_unique_ids(self) -> None:
+        validator = load_validator_module()
+        ledger = valid_ledger()
+        relation = ledger["files"][0]["relations"][0]
+        del relation["id"]
+
+        with self.assertRaisesRegex(
+            validator.LedgerValidationError,
+            r"relation\[0\] requires id",
+        ):
+            validator.validate(valid_inventory(), ledger)
 
 
 if __name__ == "__main__":
