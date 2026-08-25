@@ -51,6 +51,15 @@ def _string_list(value: object) -> bool:
     return isinstance(value, list) and all(isinstance(item, str) for item in value)
 
 
+def _uncovered(required: list[str], coverage: object) -> list[str]:
+    if not _nonempty_strings(coverage):
+        return sorted(set(required))
+    coverage_set = set(coverage)
+    if "all" in coverage_set:
+        return []
+    return sorted(set(required) - coverage_set)
+
+
 def _paths(document: dict[str, object], label: str, errors: list[str]) -> list[str]:
     records = document.get("files")
     if not isinstance(records, list):
@@ -75,7 +84,7 @@ def _validate_finding(
     path: str,
     index: int,
     unresolved: list[str],
-    relation_ids: set[str],
+    relations_by_id: dict[str, dict[str, object]],
     analyzed_variants: set[str],
     unresolved_channels: list[dict[str, object]],
     errors: list[str],
@@ -144,8 +153,22 @@ def _validate_finding(
             errors.append(f"{prefix} architecture-violation requires relation_refs")
         else:
             for relation_ref in relation_refs:
-                if relation_ref not in relation_ids:
+                relation = relations_by_id.get(relation_ref)
+                if relation is None:
                     errors.append(f"{prefix} references unknown relation id: {relation_ref}")
+                    continue
+                uncovered_scopes = _uncovered(scopes, relation.get("scopes"))
+                if uncovered_scopes:
+                    errors.append(
+                        f"{prefix} relation id {relation_ref} does not cover finding scopes: "
+                        f"{', '.join(uncovered_scopes)}"
+                    )
+                uncovered_variants = _uncovered(variants, relation.get("variants"))
+                if uncovered_variants:
+                    errors.append(
+                        f"{prefix} relation id {relation_ref} does not cover finding variants: "
+                        f"{', '.join(uncovered_variants)}"
+                    )
 
 
 def _validate_relation(
@@ -153,21 +176,12 @@ def _validate_relation(
     path: str,
     index: int,
     inventory_paths: set[str],
-    relation_ids: set[str],
     errors: list[str],
 ) -> None:
     prefix = f"{path} relation[{index}]"
     if not isinstance(relation, dict):
         errors.append(f"{prefix} must be an object")
         return
-
-    relation_id = relation.get("id")
-    if not isinstance(relation_id, str) or not relation_id.strip():
-        errors.append(f"{prefix} requires id")
-    elif relation_id in relation_ids:
-        errors.append(f"{prefix} duplicates relation id: {relation_id}")
-    else:
-        relation_ids.add(relation_id)
 
     kind = relation.get("kind")
     if not isinstance(kind, str) or not kind.strip():
@@ -193,11 +207,42 @@ def _validate_relation(
     if not _nonempty_strings(relation.get("scopes")):
         errors.append(f"{prefix} requires scopes")
 
+    if not _nonempty_strings(relation.get("variants")):
+        errors.append(f"{prefix} requires variants")
+
+
+def _collect_relations(
+    records: list[object],
+    errors: list[str],
+) -> dict[str, dict[str, object]]:
+    relations_by_id: dict[str, dict[str, object]] = {}
+    for file_index, record in enumerate(records):
+        if not isinstance(record, dict):
+            continue
+        path_value = record.get("path")
+        path = path_value if isinstance(path_value, str) and path_value else f"ledger.files[{file_index}]"
+        relations = record.get("relations")
+        if not isinstance(relations, list):
+            continue
+        for relation_index, relation in enumerate(relations):
+            if not isinstance(relation, dict):
+                continue
+            prefix = f"{path} relation[{relation_index}]"
+            relation_id = relation.get("id")
+            if not isinstance(relation_id, str) or not relation_id.strip():
+                errors.append(f"{prefix} requires id")
+            elif relation_id in relations_by_id:
+                errors.append(f"{prefix} duplicates relation id: {relation_id}")
+            else:
+                relations_by_id[relation_id] = relation
+    return relations_by_id
+
 
 def _validate_file(
     record: object,
     index: int,
     inventory_paths: set[str],
+    relations_by_id: dict[str, dict[str, object]],
     analyzed_variants: set[str],
     unresolved_channels: list[dict[str, object]],
     errors: list[str],
@@ -225,7 +270,6 @@ def _validate_file(
         errors.append(f"{path} requires evidence")
 
     relations = record.get("relations")
-    relation_ids: set[str] = set()
     if not isinstance(relations, list):
         errors.append(f"{path} relations must be a list")
     else:
@@ -235,7 +279,6 @@ def _validate_file(
                 path,
                 relation_index,
                 inventory_paths,
-                relation_ids,
                 errors,
             )
 
@@ -261,7 +304,7 @@ def _validate_file(
             path,
             finding_index,
             unresolved,
-            relation_ids,
+            relations_by_id,
             analyzed_variants,
             unresolved_channels,
             errors,
@@ -355,11 +398,13 @@ def validate(inventory: dict[str, object], ledger: dict[str, object]) -> None:
 
     records = ledger.get("files")
     if isinstance(records, list):
+        relations_by_id = _collect_relations(records, errors)
         for index, record in enumerate(records):
             _validate_file(
                 record,
                 index,
                 inventory_set,
+                relations_by_id,
                 analyzed_variants,
                 unresolved_channels,
                 errors,

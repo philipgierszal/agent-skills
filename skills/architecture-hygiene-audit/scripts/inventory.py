@@ -108,6 +108,28 @@ def _sha256(path: Path, kind: str) -> str | None:
     return digest.hexdigest()
 
 
+def _submodule_state(path: Path) -> tuple[bool, str | None, bool | None]:
+    git_marker = path / ".git"
+    if not path.is_dir() or not (git_marker.is_file() or git_marker.is_dir()):
+        return False, None, None
+
+    head_output = _run_git(path, "rev-parse", "--verify", "HEAD", allow_failure=True)
+    if not head_output:
+        return False, None, None
+    head = head_output.decode("ascii", errors="replace").rstrip("\r\n")
+    dirty = bool(
+        _run_git(
+            path,
+            "status",
+            "--porcelain=v1",
+            "-z",
+            "--untracked-files=normal",
+            allow_failure=True,
+        )
+    )
+    return True, head, dirty
+
+
 def build_inventory(repo: Path) -> dict[str, object]:
     """Return a stable inventory of tracked and non-ignored untracked paths."""
 
@@ -131,13 +153,14 @@ def build_inventory(repo: Path) -> dict[str, object]:
         exists = path.exists() or path.is_symlink()
 
         if is_conflicted:
-            worktree_status = "conflicted"
-        elif not exists:
-            worktree_status = "missing"
+            index_status = "conflicted"
+        elif stage_zero:
+            index_status = "tracked"
         else:
-            worktree_status = "present"
+            index_status = "absent"
+        worktree_status = "present" if exists else "missing"
 
-        if worktree_status == "missing":
+        if not exists:
             kind = "missing"
             size_bytes = None
         elif mode == "160000":
@@ -162,6 +185,11 @@ def build_inventory(repo: Path) -> dict[str, object]:
             except OSError as error:
                 raise InventoryError(f"Cannot inspect {path}: {error}") from error
 
+        if mode == "160000":
+            submodule_initialized, submodule_head, submodule_dirty = _submodule_state(path)
+        else:
+            submodule_initialized, submodule_head, submodule_dirty = None, None, None
+
         files.append(
             {
                 "path": relative_path,
@@ -170,11 +198,15 @@ def build_inventory(repo: Path) -> dict[str, object]:
                 "git_mode": mode,
                 "git_object": git_object,
                 "index_stages": stages,
+                "index_status": index_status,
                 "head_entry": head_entry,
                 "worktree_status": worktree_status,
                 "kind": kind,
                 "size_bytes": size_bytes,
                 "sha256": _sha256(path, kind),
+                "submodule_initialized": submodule_initialized,
+                "submodule_head": submodule_head,
+                "submodule_dirty": submodule_dirty,
             }
         )
 
@@ -188,6 +220,7 @@ def build_inventory(repo: Path) -> dict[str, object]:
     return {
         "inventory_version": 1,
         "inventory_digest": inventory_digest,
+        "path_encoding": "utf-8 with surrogateescape serialized as JSON escapes",
         "repository_root": root.as_posix(),
         "revision": revision,
         "dirty": dirty,
@@ -199,7 +232,7 @@ def build_inventory(repo: Path) -> dict[str, object]:
 def write_inventory(repo: Path, output: Path) -> None:
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(
-        json.dumps(build_inventory(repo), indent=2, ensure_ascii=False) + "\n",
+        json.dumps(build_inventory(repo), indent=2, ensure_ascii=True) + "\n",
         encoding="utf-8",
     )
 
