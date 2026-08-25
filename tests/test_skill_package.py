@@ -3,6 +3,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import re
+import subprocess
 import unittest
 from pathlib import Path
 from urllib.parse import unquote
@@ -41,6 +42,25 @@ def load_frontmatter(path: Path) -> dict[str, object]:
 
 
 class SkillPackageTests(unittest.TestCase):
+    def test_shebang_scripts_are_executable_in_git(self) -> None:
+        scripts = sorted((SKILL / "scripts").glob("*.py"))
+        self.assertTrue(scripts)
+
+        for script in scripts:
+            relative = script.relative_to(ROOT).as_posix()
+            result = subprocess.run(
+                ["git", "ls-files", "--stage", "--", relative],
+                cwd=ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+            mode = result.stdout.split(maxsplit=1)[0]
+
+            with self.subTest(script=relative):
+                self.assertTrue(script.read_text(encoding="utf-8").startswith("#!"))
+                self.assertEqual("100755", mode)
+
     def test_dev_requirements_pin_yaml_parser(self) -> None:
         requirements = (ROOT / "requirements-dev.txt").read_text(encoding="utf-8").splitlines()
 
