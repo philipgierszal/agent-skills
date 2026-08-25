@@ -1,0 +1,18 @@
+version: 1
+modules:
+  application:
+    paths: ["src/main.py"]
+    public_roots: ["src/main.py"]
+  legacy:
+    paths: ["src/legacy.py"]
+rules:
+  - id: application-may-import-legacy
+    from: application
+    allow:
+      target: legacy
+      edge_kinds: [python-import]
+cycles:
+  forbid_between_modules: true
+variants:
+  - name: linux-cpython-3.13
+    targets: ["application"]

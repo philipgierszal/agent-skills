@@ -1,0 +1,63 @@
+{
+  "inventory_version": 1,
+  "inventory_digest": "11bbc5e604cb8f32d068a2e9402c43c0eecbbd7c7481d34992d37c4801a9eb24",
+  "path_encoding": "utf-8 with surrogateescape serialized as JSON escapes",
+  "repository_root": "/example/order-service",
+  "revision": "0123456789abcdef0123456789abcdef01234567",
+  "dirty": false,
+  "scope": "HEAD/index-tracked plus non-ignored untracked paths",
+  "files": [
+    {
+      "path": "src/legacy.py",
+      "tracked": true,
+      "tracked_at_head": true,
+      "git_mode": "100644",
+      "git_object": "1111111111111111111111111111111111111111",
+      "index_stages": [
+        {
+          "mode": "100644",
+          "object": "1111111111111111111111111111111111111111",
+          "stage": 0
+        }
+      ],
+      "index_status": "tracked",
+      "head_entry": {
+        "mode": "100644",
+        "object": "1111111111111111111111111111111111111111"
+      },
+      "worktree_status": "present",
+      "kind": "file",
+      "size_bytes": 74,
+      "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+      "submodule_initialized": null,
+      "submodule_head": null,
+      "submodule_dirty": null
+    },
+    {
+      "path": "src/main.py",
+      "tracked": true,
+      "tracked_at_head": true,
+      "git_mode": "100644",
+      "git_object": "2222222222222222222222222222222222222222",
+      "index_stages": [
+        {
+          "mode": "100644",
+          "object": "2222222222222222222222222222222222222222",
+          "stage": 0
+        }
+      ],
+      "index_status": "tracked",
+      "head_entry": {
+        "mode": "100644",
+        "object": "2222222222222222222222222222222222222222"
+      },
+      "worktree_status": "present",
+      "kind": "file",
+      "size_bytes": 91,
+      "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+      "submodule_initialized": null,
+      "submodule_head": null,
+      "submodule_dirty": null
+    }
+  ]
+}

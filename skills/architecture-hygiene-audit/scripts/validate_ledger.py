@@ -7,9 +7,8 @@ import argparse
 import json
 import sys
 from collections import Counter
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
-
 
 REVIEW_STATUSES = {"content-reviewed", "tool-reviewed", "metadata-only", "excluded"}
 REACHABILITY = {"root", "reachable", "unreachable", "candidate", "unknown", "not-applicable"}

@@ -9,8 +9,8 @@ import json
 import os
 import subprocess
 import sys
+from collections.abc import Sequence
 from pathlib import Path
-from typing import Sequence
 
 
 class InventoryError(RuntimeError):
@@ -26,8 +26,7 @@ def _run_git(repo: Path, *args: str, allow_failure: bool = False) -> bytes:
         result = subprocess.run(
             ["git", "-C", str(repo), *args],
             check=False,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
+            capture_output=True,
         )
     except OSError as error:
         raise InventoryError(f"Unable to execute Git: {error}") from error

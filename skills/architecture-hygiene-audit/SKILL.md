@@ -1,6 +1,10 @@
 ---
 name: architecture-hygiene-audit
 description: Use when asked to audit an entire repository for dead code, orphaned files, unused methods or exports, dependency cycles, architecture-rule violations, repository structure problems, or SOLID, separation-of-concerns, DRY, KISS, and YAGNI concerns.
+license: MIT
+metadata:
+  author: philipgierszal
+  compatibility: Requires Git and Python 3.10+; designed for coding agents with shell access.
 ---
 
 # Architecture Hygiene Audit

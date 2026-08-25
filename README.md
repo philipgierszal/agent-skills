@@ -1,45 +1,58 @@
-# Philip's Agent Skills
+# Agent Skills
 
-Reusable custom skills for Codex and compatible Agent Skills clients.
+[![Validate](https://github.com/philipgierszal/agent-skills/actions/workflows/validate.yml/badge.svg)](https://github.com/philipgierszal/agent-skills/actions/workflows/validate.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## Included skill
+Evidence-first skills that help coding agents audit repositories without turning guesses into deletion advice.
 
-### `architecture-hygiene-audit`
+## Install in 30 seconds
 
-Performs exhaustive, read-only repository audits for:
-
-- dead-code candidates, unused methods/exports, orphaned files, and unreachable modules;
-- file, symbol, configuration, build, deployment, generation, and framework relationships;
-- dependency cycles and explicit architecture-rule violations; and
-- evidence-backed SOLID, separation-of-concerns, DRY, KISS, and YAGNI design concerns.
-
-The skill creates a deterministic Git inventory and requires an exactly reconciled per-file ledger. It uses ecosystem-native analyzers as evidence, checks dynamic and convention-driven relationships, and refuses to equate an analyzer warning with safe deletion.
-
-Audit mode does not delete, rewrite, move, suppress, or automatically remediate source code.
-
-## Install
-
-Install with the Agent Skills CLI:
+Install the architecture audit skill into the current project:
 
 ```bash
 npx skills@latest add philipgierszal/agent-skills --skill architecture-hygiene-audit
 ```
 
-The repository is initially private, so GitHub authentication with repository access is required.
+To make it available to Codex in every project:
 
-For a local checkout, copy `skills/architecture-hygiene-audit` into your personal Codex skills directory as `~/.codex/skills/architecture-hygiene-audit`. Restart or begin a new Codex turn so the skill catalog refreshes.
+```bash
+npx skills@latest add philipgierszal/agent-skills \
+  --skill architecture-hygiene-audit \
+  --global \
+  --agent codex
+```
 
-## Use
+Preview the repository's available skills without installing:
 
-Invoke it explicitly:
+```bash
+npx skills@latest add philipgierszal/agent-skills --list
+```
+
+## First use
+
+Invoke the skill explicitly:
 
 ```text
 $architecture-hygiene-audit Audit this repository for dead code, orphaned files, unused methods, dependency violations, and architecture design smells.
 ```
 
-Its discovery metadata also allows automatic invocation for exhaustive repository architecture and code-hygiene audit requests.
+It can also be selected implicitly for requests such as:
 
-The report distinguishes:
+```text
+Audit every file in this repository. Map file and symbol relationships, then identify dead ends, orphaned files, unused exports, dependency cycles, and violations of our documented architecture rules.
+```
+
+## Skill catalog
+
+| Skill | Use it for | Key output | Side effects | Status |
+| --- | --- | --- | --- | --- |
+| [`architecture-hygiene-audit`](skills/architecture-hygiene-audit/SKILL.md) | Whole-repository dead-code, dependency, structure, and SOLID/SoC/DRY/KISS/YAGNI review | Deterministic inventory, reconciled evidence ledger, calibrated findings, and a human report | Does not change the target source tree; may write audit artifacts outside it | Stable |
+
+## What the audit proves
+
+The skill inventories every Git-tracked and non-ignored untracked path, separates production reachability from test/tool reachability, records typed relationships, checks dynamic and convention-driven channels, and requires exactly one evidence-ledger entry per path.
+
+Findings use calibrated classes:
 
 - `confirmed-unreachable`
 - `high-confidence-unused`
@@ -49,22 +62,47 @@ The report distinguishes:
 - `design-smell`
 - `unknown-or-exempt`
 
-The strongest clean conclusion it permits is scoped: “No known findings within the documented roots, variants, tools, and dynamic-behavior model.”
+An analyzer warning is evidence, not permission to delete. Architecture violations require a versioned repository rule; SOLID, separation of concerns, DRY, KISS, and YAGNI remain contextual design lenses otherwise.
 
-## Develop and verify
+See the [validator-backed example](examples/architecture-hygiene-audit/README.md) for a policy, inventory, reconciled ledger, and report.
 
-Requirements: Python 3.9+ and Git.
+## Requirements and compatibility
+
+- Git, for repository inventory and revision binding.
+- Python 3.10 or newer, for the bundled deterministic scripts.
+- Node.js/npm only when installing through `npx skills`.
+- A coding agent with shell access.
+
+The skill follows the portable [Agent Skills specification](https://agentskills.io/specification) and includes Codex display/invocation metadata. Codex is the currently tested client; portability of the skill directory does not imply that every agent harness has been integration-tested.
+
+## Update or remove
 
 ```bash
-python -m unittest discover -s tests -v
-python ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py skills/architecture-hygiene-audit
+npx skills update architecture-hygiene-audit
+npx skills remove architecture-hygiene-audit
 ```
 
-The evaluation record at [`evals/architecture-hygiene-audit.md`](evals/architecture-hygiene-audit.md) documents RED baseline gaps, GREEN behavioral results, and the refactor prompted by an observed failure. Primary-source research is at [`docs/research/architecture-hygiene-audit.md`](docs/research/architecture-hygiene-audit.md).
+Add `--global` when maintaining a global installation.
 
-## Why this is not a Matt Pocock fork
+## Develop and validate
 
-[Matt Pocock's skills](https://github.com/mattpocock/skills) are a broad, composable engineering workflow collection. This repository contains independently maintained personal skills with their own scope, tests, release history, and installation path. A fork would be appropriate only if the intent were to modify and continuously merge Matt's complete distribution.
+```bash
+python -m pip install -r requirements-dev.txt
+python -m unittest discover -s tests -v
+python -m ruff check .
+python -m compileall -q skills tests
+python skills/architecture-hygiene-audit/scripts/validate_ledger.py \
+  --inventory examples/architecture-hygiene-audit/inventory.json \
+  --ledger examples/architecture-hygiene-audit/ledger.json
+```
+
+Behavioral evaluation evidence lives in [`evals/`](evals/). The design and primary-source rationale live in [`docs/research/`](docs/research/) and [`docs/superpowers/specs/`](docs/superpowers/specs/).
+
+## Contributing and security
+
+Read [`CONTRIBUTING.md`](CONTRIBUTING.md) before changing a skill's triggers, behavior, scripts, or output contract. Report ordinary defects through GitHub Issues. Report vulnerabilities privately according to [`SECURITY.md`](SECURITY.md).
+
+This is an independently maintained collection, informed by the clear catalogs and validation culture of [Matt Pocock's skills](https://github.com/mattpocock/skills) and [Superpowers](https://github.com/obra/superpowers); it is not a fork of either project.
 
 ## License
 

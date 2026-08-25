@@ -10,7 +10,6 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "skills" / "architecture-hygiene-audit" / "scripts" / "inventory.py"
 
@@ -28,8 +27,7 @@ def run_git(repo: Path, *args: str) -> None:
     subprocess.run(
         ["git", "-C", str(repo), *args],
         check=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        capture_output=True,
     )
 
 
@@ -219,8 +217,7 @@ class InventoryTests(unittest.TestCase):
             merge = subprocess.run(
                 ["git", "-C", str(repo), "merge", "side"],
                 check=False,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             )
             self.assertNotEqual(merge.returncode, 0)
 
@@ -261,8 +258,7 @@ class InventoryTests(unittest.TestCase):
                 ["git", "-C", str(repo), "hash-object", "-w", "--stdin"],
                 input=b"target.txt",
                 check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             ).stdout.decode("ascii").strip()
             run_git(repo, "update-index", "--add", "--cacheinfo", "120000", blob, "link")
             run_git(repo, "commit", "-m", "symlink fixture")
@@ -309,8 +305,7 @@ class InventoryTests(unittest.TestCase):
             head = subprocess.run(
                 ["git", "-C", str(repo), "rev-parse", "HEAD"],
                 check=True,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE,
+                capture_output=True,
             ).stdout.decode("ascii").strip()
             run_git(
                 repo,
@@ -383,9 +378,11 @@ class InventoryTests(unittest.TestCase):
     def test_rejects_non_git_directory(self) -> None:
         inventory = load_inventory_module()
 
-        with tempfile.TemporaryDirectory() as directory:
-            with self.assertRaisesRegex(inventory.InventoryError, "Git worktree"):
-                inventory.build_inventory(Path(directory))
+        with (
+            tempfile.TemporaryDirectory() as directory,
+            self.assertRaisesRegex(inventory.InventoryError, "Git worktree"),
+        ):
+            inventory.build_inventory(Path(directory))
 
 
 if __name__ == "__main__":

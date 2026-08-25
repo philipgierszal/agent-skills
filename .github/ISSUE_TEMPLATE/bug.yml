@@ -1,0 +1,88 @@
+name: Bug report
+description: Report a reproducible problem in a skill, script, example, or repository contract.
+title: "[Bug]: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: >-
+        Thanks for helping improve the project. Do not include secrets or private
+        repository content. Use the Security tab for vulnerabilities.
+  - type: dropdown
+    id: skill
+    attributes:
+      label: Affected skill
+      options:
+        - architecture-hygiene-audit
+        - Repository tooling or documentation
+    validations:
+      required: true
+  - type: input
+    id: agent
+    attributes:
+      label: Agent and version
+      description: Name the coding agent, model, and client version when relevant.
+      placeholder: Codex, model and client version
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Operating system plus Python and Git versions.
+      placeholder: Windows 11, Python 3.13, Git 2.51
+    validations:
+      required: true
+  - type: textarea
+    id: repository-shape
+    attributes:
+      label: Repository shape
+      description: Describe languages, workspaces, frameworks, variants, and dynamic-loading mechanisms without sharing private code.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction
+      description: Give the invocation and smallest repeatable sequence.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Sanitized logs or artifacts
+      description: Paste only the minimum useful output after removing secrets and private content.
+      render: shell
+  - type: dropdown
+    id: safety-impact
+    attributes:
+      label: Safety impact
+      description: Could this change files, expose data, or overstate permission to delete code?
+      options:
+        - No known safety impact
+        - Possible safety impact
+        - Confirmed safety impact
+    validations:
+      required: true
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Submission checks
+      options:
+        - label: I removed secrets and private repository content.
+          required: true
+        - label: I checked that this is not a vulnerability requiring private reporting.
+          required: true

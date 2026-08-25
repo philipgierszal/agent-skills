@@ -1,0 +1,92 @@
+{
+  "ledger_version": 1,
+  "inventory_revision": "0123456789abcdef0123456789abcdef01234567",
+  "inventory_digest": "11bbc5e604cb8f32d068a2e9402c43c0eecbbd7c7481d34992d37c4801a9eb24",
+  "variants_analyzed": [
+    "linux-cpython-3.13"
+  ],
+  "unresolved_channels": [
+    {
+      "channel": "No production trace was available for string-based callable lookup",
+      "scopes": [
+        "production",
+        "full-repository"
+      ],
+      "variants": [
+        "linux-cpython-3.13"
+      ]
+    }
+  ],
+  "files": [
+    {
+      "path": "src/legacy.py",
+      "role": "Imported legacy helper module",
+      "review_status": "content-reviewed",
+      "reachability": "reachable",
+      "evidence": [
+        "src/main.py imports src/legacy.py in the production root",
+        "Python AST inspection found one module-level helper"
+      ],
+      "relations": [],
+      "unresolved_dynamic_references": [
+        "A string-based lookup could call legacy_helper at runtime"
+      ],
+      "findings": [
+        {
+          "class": "probable-unused",
+          "subject": "src.legacy:legacy_helper",
+          "location": "src/legacy.py:4",
+          "summary": "The imported module is reachable, but no analyzed caller uses legacy_helper.",
+          "evidence": [
+            "Static call analysis found no call to legacy_helper",
+            "No tests or configured entry points name legacy_helper"
+          ],
+          "counter_evidence_checked": [
+            "Reviewed direct imports and calls",
+            "Reviewed configured entry points and the test root"
+          ],
+          "scopes": [
+            "production",
+            "full-repository"
+          ],
+          "variants": [
+            "linux-cpython-3.13"
+          ],
+          "confidence_rationale": "Static evidence is consistent, but the unresolved string-lookup channel prevents a high-certainty finding.",
+          "action": "Observe or exercise production lookup paths, then remove the symbol only in a separately authorized change."
+        }
+      ]
+    },
+    {
+      "path": "src/main.py",
+      "role": "Production application entry point",
+      "review_status": "content-reviewed",
+      "reachability": "root",
+      "evidence": [
+        "Declared as the application public root in .architecture-hygiene.yml",
+        "Selected as the linux-cpython-3.13 startup target"
+      ],
+      "relations": [
+        {
+          "id": "main-imports-legacy",
+          "kind": "python-import",
+          "target": "src/legacy.py",
+          "target_type": "file",
+          "evidence": [
+            "src/main.py:3 imports src.legacy"
+          ],
+          "confidence": "direct",
+          "scopes": [
+            "production",
+            "full-repository"
+          ],
+          "variants": [
+            "linux-cpython-3.13"
+          ]
+        }
+      ],
+      "unresolved_dynamic_references": [],
+      "findings": []
+    }
+  ]
+}
