@@ -18,7 +18,7 @@ class InventoryError(RuntimeError):
 
 
 def _decode_path(value: bytes) -> str:
-    return value.decode("utf-8", errors="surrogateescape").replace("\\", "/")
+    return value.decode("utf-8", errors="surrogateescape")
 
 
 def _run_git(repo: Path, *args: str, allow_failure: bool = False) -> bytes:
