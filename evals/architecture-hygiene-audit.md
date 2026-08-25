@@ -44,4 +44,23 @@ The baseline therefore passed conceptual safety but failed `Scope proof`. The mi
 
 ## GREEN results
 
-Not run yet. Record each independent response, criterion score, observed gap, and any resulting minimal skill revision here after authoring.
+Three fresh agents ran the scenarios with the authored skill. Scores use `P` for pass and `N/A` only when a mechanism is absent from the scenario.
+
+| Run | Scope | Roots | Variants | Dynamic | Evidence | Architecture | Safety | Claim | Result |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| TypeScript monorepo | P | P | P | P | P | P | P | P | GREEN |
+| Architecture principles, first run | **Fail** | **Fail** | P | N/A | P | P | P | P | RED |
+| Architecture principles, retry | P | P | P | N/A | P | P | P | P | GREEN |
+| Python plugins | P | P | P | P | P | P | P | P | GREEN |
+
+### Observations
+
+- The TypeScript response required exact inventory/ledger reconciliation, separate production/full roots, a variant matrix, source-located typed relations, dynamic preflight, no deletion, and the calibrated conclusion. It explicitly refused the 90-minute shortcut.
+- The Python response applied the same contract to entry points, decorators, string registration, reflection, CLI configuration, pytest fixtures, optional extras, migrations, vendored code, assets, containers, and CI. Unknowns remained retained and visible.
+- The first architecture response correctly rejected slogan-based gates but answered only the policy question. It omitted the inventory/ledger proof and root statement, demonstrating that the general workflow was not prominent enough for focused architecture prompts.
+
+### Minimal refactor and re-test
+
+`SKILL.md` gained one rule: every focused SOLID, DRY, dependency, or repository-structure audit retains inventory/ledger scope proof and states roots, variants, and limitations. The retry then required “a revision-bound inventory and exactly reconciled ledger,” separated production from tests/tools, named variant requirements, and explicitly limited the result to an enforcement decision rather than an exhaustive repository claim.
+
+No additional loopholes or rationalizations appeared. All applicable criteria were GREEN after the single evidence-supported revision.

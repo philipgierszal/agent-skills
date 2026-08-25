@@ -7,6 +7,8 @@ description: Use when asked to audit an entire repository for dead code, orphane
 
 Audit the whole repository without changing its source. Every conclusion must name its scope, evidence, counter-evidence, and uncertainty.
 
+Every invocation—including a focused SOLID, DRY, dependency-rule, or repository-structure audit—must retain the inventory/ledger scope proof and state the relevant roots, variants, and limitations. Do not answer only the design question and imply the repository was exhaustively audited.
+
 ## Non-negotiable contract
 
 - Account for every Git-tracked and non-ignored untracked path. Never silently sample.
@@ -96,6 +98,7 @@ Use calibrated language: **“No known findings within the documented roots, var
 | “Config files do not count as code relations.” | Model build, runtime, CI, deployment, and registry references. |
 | “Every file was reviewed” without reconciliation. | Generate the inventory and pass the ledger validator. |
 | “DRY means every duplicate must be abstracted.” | Ask whether it is duplicated knowledge and changes for the same reason. |
+| “This is only an architecture question, so inventory can wait.” | Keep the inventory/ledger proof, roots, variants, and limitations even in a focused report. |
 | “Deadline means sample the hot spots.” | Batch the full scope or report the audit incomplete. |
 
 Remediation is a separate, explicitly authorized change. Remove one dependency-closed candidate at a time and re-run builds, tests, type checks, linters, packaging, startup, policy checks, and affected variants.
