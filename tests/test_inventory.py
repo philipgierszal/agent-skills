@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import tempfile
 import unittest
@@ -30,6 +31,28 @@ def run_git(repo: Path, *args: str) -> None:
 
 
 class InventoryTests(unittest.TestCase):
+    def test_path_decoder_preserves_backslash_bytes(self) -> None:
+        inventory = load_inventory_module()
+        self.assertEqual(inventory._decode_path(b"module\\name.py"), "module\\name.py")
+
+    @unittest.skipIf(os.name == "nt", "Windows filenames cannot contain backslashes")
+    def test_distinguishes_posix_backslash_name_from_directory_separator(self) -> None:
+        inventory = load_inventory_module()
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            run_git(repo, "init", "-b", "main")
+            run_git(repo, "config", "user.name", "Audit Test")
+            run_git(repo, "config", "user.email", "audit@example.test")
+            (repo / "a").mkdir()
+            (repo / "a\\b.txt").write_text("backslash\n", encoding="utf-8")
+            (repo / "a" / "b.txt").write_text("separator\n", encoding="utf-8")
+            run_git(repo, "add", "--all")
+            run_git(repo, "commit", "-m", "fixture")
+
+            paths = {entry["path"] for entry in inventory.build_inventory(repo)["files"]}
+            self.assertEqual(paths, {"a\\b.txt", "a/b.txt"})
+
     def test_inventories_tracked_and_nonignored_untracked_paths(self) -> None:
         inventory = load_inventory_module()
 
