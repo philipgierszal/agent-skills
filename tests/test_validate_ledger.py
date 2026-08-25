@@ -138,6 +138,8 @@ class LedgerValidationTests(unittest.TestCase):
         record["findings"] = [
             {
                 "class": "confirmed-unreachable",
+                "subject": "src/main.py::main",
+                "location": "src/main.py:1",
                 "summary": "Entrypoint appears unused",
                 "evidence": ["vulture:src/main.py:1"],
                 "counter_evidence_checked": [],
@@ -159,6 +161,8 @@ class LedgerValidationTests(unittest.TestCase):
         ledger["files"][1]["findings"] = [
             {
                 "class": "definitely-dead",
+                "subject": "src/main.py::main",
+                "location": "src/main.py:1",
                 "summary": "No callers",
                 "evidence": [],
                 "counter_evidence_checked": [],
@@ -199,6 +203,29 @@ class LedgerValidationTests(unittest.TestCase):
         self.assertIn("relation[0] requires evidence", message)
         self.assertIn("relation[0] has invalid confidence", message)
         self.assertIn("relation[0] requires scopes", message)
+
+    def test_findings_require_a_subject_and_source_location(self) -> None:
+        validator = load_validator_module()
+        ledger = valid_ledger()
+        ledger["files"][1]["findings"] = [
+            {
+                "class": "design-smell",
+                "subject": "",
+                "location": "",
+                "summary": "Entrypoint mixes orchestration and policy",
+                "evidence": ["manual:src/main.py:1-20"],
+                "counter_evidence_checked": [],
+                "confidence_rationale": "Responsibilities change independently",
+                "action": "Review the module seam with maintainers",
+            }
+        ]
+
+        with self.assertRaises(validator.LedgerValidationError) as raised:
+            validator.validate(valid_inventory(), ledger)
+
+        message = str(raised.exception)
+        self.assertIn("finding requires subject", message)
+        self.assertIn("finding requires location", message)
 
 
 if __name__ == "__main__":
