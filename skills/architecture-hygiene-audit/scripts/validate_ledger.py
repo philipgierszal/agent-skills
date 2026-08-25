@@ -86,7 +86,7 @@ def _validate_finding(
     if finding_class not in FINDING_CLASSES:
         errors.append(f"{prefix} has invalid finding class: {finding_class!r}")
 
-    for key in ("summary", "confidence_rationale", "action"):
+    for key in ("subject", "location", "summary", "confidence_rationale", "action"):
         value = finding.get(key)
         if not isinstance(value, str) or not value.strip():
             errors.append(f"{prefix} finding requires {key}")
