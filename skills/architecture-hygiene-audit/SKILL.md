@@ -31,7 +31,7 @@ Run:
 python "<SKILL_ROOT>/scripts/inventory.py" --repo "<repo>" --output "<audit-dir>/inventory.json"
 ```
 
-The inventory covers the union of HEAD, every index stage, and non-ignored untracked paths. It preserves staged/unstaged deletions and merge conflicts as explicit path states, distinguishes submodules, real symlinks, and platforms that materialize Git symlinks as regular files, and binds the ledger to an `inventory_digest` of the inventoried metadata. Inspect ignored paths only when manifests, builds, deployments, runtime configuration, or repository policy make them relevant; record those as explicit external/ignored scope additions. Record `.git`, caches, dependency stores, and unrelated build output as scope exclusions rather than pretending they were reviewed.
+The inventory covers the union of HEAD, every index stage, and non-ignored untracked paths. It models index conflict separately from worktree presence, preserves staged/unstaged deletions, distinguishes submodules, real symlinks, and platforms that materialize Git symlinks as regular files, and safely serializes legal non-UTF-8 POSIX path bytes. Initialized submodule revision and dirty state participate in the `inventory_digest` that binds the ledger to inventoried content. Inspect ignored paths only when manifests, builds, deployments, runtime configuration, or repository policy make them relevant; record those as explicit external/ignored scope additions. Record `.git`, caches, dependency stores, and unrelated build output as scope exclusions rather than pretending they were reviewed.
 
 ### 2. Discover intent, roots, and variants
 
@@ -79,12 +79,12 @@ Before reporting completion, confirm:
 
 - inventory and ledger revisions and `inventory_digest` match;
 - every inventory path appears exactly once;
-- every relation has a unique ID, type, target, evidence, confidence, and scope;
+- every relation has a ledger-wide unique ID, type, target, evidence, confidence, scopes, and variants;
 - every analyzer finding has a disposition;
 - production and full-repository roots and analyzed variants are named;
 - failed tools, unsupported syntax, dynamic channels, external consumers, and missing variants remain visible with affected scopes and variants;
 - high-certainty findings name analyzed scopes/variants, contain substantive counter-evidence checks, and overlap no unresolved dynamic channel;
-- every architecture violation cites a policy rule and the observed relation IDs that violate it; and
+- every architecture violation cites a policy rule and applicable observed relation IDs whose scopes and variants cover the finding; and
 - the target source tree was not changed.
 
 Use calibrated language: **“No known findings within the documented roots, variants, tools, and dynamic-behavior model.”** Never claim universal absence of dead code.

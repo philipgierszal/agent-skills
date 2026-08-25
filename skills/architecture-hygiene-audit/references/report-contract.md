@@ -48,7 +48,8 @@ This example is complete for one path; real ledgers contain exactly one row for 
           "target_type": "file",
           "evidence": ["src/orders/validate.ts:1"],
           "confidence": "direct",
-          "scopes": ["production", "test"]
+          "scopes": ["production", "test"],
+          "variants": ["production/windows-x64", "full-repository/windows-x64"]
         }
       ],
       "unresolved_dynamic_references": [],
@@ -71,7 +72,7 @@ This example is complete for one path; real ledgers contain exactly one row for 
 }
 ```
 
-Copy `revision` and `inventory_digest` from `inventory.json`; validation rejects either mismatch, including content drift at the same Git revision. Give every relation a unique non-empty `id`. For `metadata-only` or `excluded`, add a non-empty `review_rationale`. For `architecture-violation`, add `policy_rule` and `relation_refs` containing existing relation IDs. Every finding requires affected `scopes`, analyzed `variants`, and a source-located subject, including unused methods and exports. Each unresolved channel is an object with a description plus affected scopes and variants; use `all` only when the gap truly crosses the entire audit.
+Copy `revision` and `inventory_digest` from `inventory.json`; validation rejects either mismatch, including worktree, index, or initialized-submodule drift at the same Git revision. Give every relation a ledger-wide unique non-empty `id` plus its applicable `scopes` and `variants`. For `metadata-only` or `excluded`, add a non-empty `review_rationale`. For `architecture-violation`, add `policy_rule` and `relation_refs` containing existing relation IDs whose scopes and variants cover the finding. Every finding requires affected `scopes`, analyzed `variants`, and a source-located subject, including unused methods and exports. Each unresolved channel is an object with a description plus affected scopes and variants; use `all` only when the gap truly crosses the entire audit.
 
 ## Human report
 

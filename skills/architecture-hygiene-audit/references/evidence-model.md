@@ -15,13 +15,14 @@ Attach variant predicates to roots and relations: application/package, platform,
 
 Each file ledger row has a `relations` array. A relation contains:
 
-- `id`: a unique, stable identifier used by findings to cite the observed edge;
+- `id`: a ledger-wide unique, stable identifier used by findings to cite the observed edge;
 - `kind`: import, call, re-export, inheritance, implementation, registration, reflection/string lookup, manifest/config/script/build/deploy reference, convention/glob discovery, generated-from/generates, template/asset/schema/migration reference, or another precise kind;
 - `target`: repository path, fully qualified symbol, external identifier, or pattern;
 - `target_type`: `file`, `symbol`, `external`, or `pattern`;
 - `evidence`: source locations, analyzer artifacts, configuration locations, or runtime observations;
 - `confidence`: `direct`, `declared`, `inferred`, or `observed`;
-- `scopes`: production, test, development, build, deployment, and/or named variants.
+- `scopes`: production, test, development, build, deployment, and/or another named audit scope.
+- `variants`: the application, platform, architecture, feature, and build variants where the edge was observed or declared.
 
 Use `target_type: external` for ignored/generated/runtime targets absent from the inventory. A file with no outgoing relation still gets `relations: []`; its role and no-relation disposition need evidence.
 
@@ -37,7 +38,7 @@ Use `target_type: external` for ignored/generated/runtime targets absent from th
 | `design-smell` | SOLID/SoC/DRY/KISS/YAGNI or complexity concern with file-level evidence | Human design review. |
 | `unknown-or-exempt` | Tool failure, unsupported syntax, generated/vendor policy, exception, or incomplete roots/variants | Keep visible; never count as clean. |
 
-Every finding needs a file or fully qualified symbol `subject`, source `location`, affected `scopes`, analyzed `variants`, summary, evidence, counter-evidence checked, confidence rationale, action, and optional policy rule. An `architecture-violation` also needs `relation_refs` that resolve to observed relation IDs. Runtime non-observation is negative evidence only.
+Every finding needs a file or fully qualified symbol `subject`, source `location`, affected `scopes`, analyzed `variants`, summary, evidence, counter-evidence checked, confidence rationale, action, and optional policy rule. An `architecture-violation` also needs `relation_refs` that resolve unambiguously to observed relation IDs whose scopes and variants cover the finding. Runtime non-observation is negative evidence only.
 
 ## Confidence promotion gate
 
