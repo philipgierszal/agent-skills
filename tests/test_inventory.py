@@ -87,6 +87,26 @@ class InventoryTests(unittest.TestCase):
 
             self.assertEqual(inventory.build_inventory(repo), inventory.build_inventory(repo))
 
+    def test_inventory_digest_changes_when_content_changes_at_same_revision(self) -> None:
+        inventory = load_inventory_module()
+
+        with tempfile.TemporaryDirectory() as directory:
+            repo = Path(directory)
+            run_git(repo, "init", "-b", "main")
+            run_git(repo, "config", "user.name", "Audit Test")
+            run_git(repo, "config", "user.email", "audit@example.test")
+            path = repo / "same-size.txt"
+            path.write_text("one\n", encoding="utf-8")
+            run_git(repo, "add", "same-size.txt")
+            run_git(repo, "commit", "-m", "fixture")
+
+            before = inventory.build_inventory(repo)
+            path.write_text("two\n", encoding="utf-8")
+            after = inventory.build_inventory(repo)
+
+            self.assertEqual(before["revision"], after["revision"])
+            self.assertNotEqual(before["inventory_digest"], after["inventory_digest"])
+
     def test_rejects_non_git_directory(self) -> None:
         inventory = load_inventory_module()
 

@@ -28,6 +28,7 @@ def load_validator_module():
 def valid_inventory() -> dict[str, object]:
     return {
         "inventory_version": 1,
+        "inventory_digest": "digest-1",
         "revision": "abc123",
         "files": [
             {"path": "README.md"},
@@ -39,6 +40,7 @@ def valid_inventory() -> dict[str, object]:
 def valid_ledger() -> dict[str, object]:
     return {
         "ledger_version": 1,
+        "inventory_digest": "digest-1",
         "inventory_revision": "abc123",
         "variants_analyzed": ["default"],
         "unresolved_channels": [],
@@ -101,6 +103,17 @@ class LedgerValidationTests(unittest.TestCase):
         self.assertIn("duplicate path: README.md", message)
         self.assertIn("missing inventory path: src/main.py", message)
         self.assertIn("unexpected ledger path: src/unexpected.py", message)
+
+    def test_rejects_inventory_digest_mismatch_at_the_same_revision(self) -> None:
+        validator = load_validator_module()
+        ledger = valid_ledger()
+        ledger["inventory_digest"] = "stale-digest"
+
+        with self.assertRaisesRegex(
+            validator.LedgerValidationError,
+            "inventory digest mismatch",
+        ):
+            validator.validate(valid_inventory(), ledger)
 
     def test_rejects_invalid_status_reachability_and_empty_evidence(self) -> None:
         validator = load_validator_module()
