@@ -50,6 +50,16 @@ def valid_ledger() -> dict[str, object]:
                 "role": "repository documentation",
                 "reachability": "not-applicable",
                 "evidence": ["manual:README headings and links"],
+                "relations": [
+                    {
+                        "kind": "documents",
+                        "target": "src/main.py",
+                        "target_type": "file",
+                        "evidence": ["README.md:usage"],
+                        "confidence": "direct",
+                        "scopes": ["development"],
+                    }
+                ],
                 "unresolved_dynamic_references": [],
                 "findings": [],
             },
@@ -59,6 +69,7 @@ def valid_ledger() -> dict[str, object]:
                 "role": "production entrypoint",
                 "reachability": "root",
                 "evidence": ["pyproject.toml:project.scripts"],
+                "relations": [],
                 "unresolved_dynamic_references": [],
                 "findings": [],
             },
@@ -164,6 +175,30 @@ class LedgerValidationTests(unittest.TestCase):
         self.assertIn("finding requires evidence", message)
         self.assertIn("finding requires confidence_rationale", message)
         self.assertIn("finding requires action", message)
+
+    def test_rejects_untyped_or_unresolvable_relations(self) -> None:
+        validator = load_validator_module()
+        ledger = valid_ledger()
+        ledger["files"][0]["relations"] = [
+            {
+                "kind": "",
+                "target": "src/missing.py",
+                "target_type": "file",
+                "evidence": [],
+                "confidence": "guess",
+                "scopes": [],
+            }
+        ]
+
+        with self.assertRaises(validator.LedgerValidationError) as raised:
+            validator.validate(valid_inventory(), ledger)
+
+        message = str(raised.exception)
+        self.assertIn("relation[0] requires kind", message)
+        self.assertIn("relation[0] references missing inventory path: src/missing.py", message)
+        self.assertIn("relation[0] requires evidence", message)
+        self.assertIn("relation[0] has invalid confidence", message)
+        self.assertIn("relation[0] requires scopes", message)
 
 
 if __name__ == "__main__":
