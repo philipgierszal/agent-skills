@@ -52,20 +52,47 @@ def _nul_paths(output: bytes) -> list[str]:
     return [_decode_path(item) for item in output.split(b"\0") if item]
 
 
-def _stage_modes(repo: Path) -> dict[str, str]:
-    modes: dict[str, str] = {}
+def _stage_entries(repo: Path) -> dict[str, list[dict[str, object]]]:
+    entries: dict[str, list[dict[str, object]]] = {}
     for record in _run_git(repo, "ls-files", "--stage", "-z").split(b"\0"):
         if not record or b"\t" not in record:
             continue
         metadata, raw_path = record.split(b"\t", 1)
         fields = metadata.split()
-        if fields:
-            modes[_decode_path(raw_path)] = fields[0].decode("ascii", errors="replace")
-    return modes
+        if len(fields) < 3:
+            continue
+        path = _decode_path(raw_path)
+        entries.setdefault(path, []).append(
+            {
+                "mode": fields[0].decode("ascii", errors="replace"),
+                "object": fields[1].decode("ascii", errors="replace"),
+                "stage": int(fields[2]),
+            }
+        )
+    for stages in entries.values():
+        stages.sort(key=lambda entry: int(entry["stage"]))
+    return entries
+
+
+def _head_entries(repo: Path) -> dict[str, dict[str, str]]:
+    entries: dict[str, dict[str, str]] = {}
+    output = _run_git(repo, "ls-tree", "-r", "-z", "HEAD", allow_failure=True)
+    for record in output.split(b"\0"):
+        if not record or b"\t" not in record:
+            continue
+        metadata, raw_path = record.split(b"\t", 1)
+        fields = metadata.split()
+        if len(fields) < 3:
+            continue
+        entries[_decode_path(raw_path)] = {
+            "mode": fields[0].decode("ascii", errors="replace"),
+            "object": fields[2].decode("ascii", errors="replace"),
+        }
+    return entries
 
 
 def _sha256(path: Path, kind: str) -> str | None:
-    if kind == "submodule":
+    if kind in {"missing", "submodule"}:
         return None
 
     digest = hashlib.sha256()
@@ -86,22 +113,46 @@ def build_inventory(repo: Path) -> dict[str, object]:
 
     root = _repository_root(repo.resolve())
     tracked = set(_nul_paths(_run_git(root, "ls-files", "--cached", "-z")))
-    paths = _nul_paths(
-        _run_git(root, "ls-files", "--cached", "--others", "--exclude-standard", "-z")
-    )
-    modes = _stage_modes(root)
+    untracked = set(_nul_paths(_run_git(root, "ls-files", "--others", "--exclude-standard", "-z")))
+    index_entries = _stage_entries(root)
+    head_entries = _head_entries(root)
+    paths = tracked | untracked | set(index_entries) | set(head_entries)
 
     files: list[dict[str, object]] = []
-    for relative_path in sorted(set(paths)):
+    for relative_path in sorted(paths):
         path = root / Path(relative_path)
-        mode = modes.get(relative_path)
-        if mode == "160000":
+        stages = index_entries.get(relative_path, [])
+        stage_zero = next((entry for entry in stages if entry["stage"] == 0), None)
+        head_entry = head_entries.get(relative_path)
+        selected_entry = stage_zero or head_entry
+        mode = selected_entry["mode"] if selected_entry else None
+        git_object = selected_entry["object"] if selected_entry else None
+        is_conflicted = any(entry["stage"] != 0 for entry in stages)
+        exists = path.exists() or path.is_symlink()
+
+        if is_conflicted:
+            worktree_status = "conflicted"
+        elif not exists:
+            worktree_status = "missing"
+        else:
+            worktree_status = "present"
+
+        if worktree_status == "missing":
+            kind = "missing"
+            size_bytes = None
+        elif mode == "160000":
             kind = "submodule"
             size_bytes = None
-        elif mode == "120000" or path.is_symlink():
+        elif path.is_symlink():
             kind = "symlink"
             try:
                 size_bytes = path.lstat().st_size
+            except OSError as error:
+                raise InventoryError(f"Cannot inspect {path}: {error}") from error
+        elif mode == "120000":
+            kind = "symlink-materialized"
+            try:
+                size_bytes = path.stat().st_size
             except OSError as error:
                 raise InventoryError(f"Cannot inspect {path}: {error}") from error
         else:
@@ -115,7 +166,12 @@ def build_inventory(repo: Path) -> dict[str, object]:
             {
                 "path": relative_path,
                 "tracked": relative_path in tracked,
+                "tracked_at_head": relative_path in head_entries,
                 "git_mode": mode,
+                "git_object": git_object,
+                "index_stages": stages,
+                "head_entry": head_entry,
+                "worktree_status": worktree_status,
                 "kind": kind,
                 "size_bytes": size_bytes,
                 "sha256": _sha256(path, kind),
@@ -135,7 +191,7 @@ def build_inventory(repo: Path) -> dict[str, object]:
         "repository_root": root.as_posix(),
         "revision": revision,
         "dirty": dirty,
-        "scope": "git-tracked plus non-ignored untracked paths",
+        "scope": "HEAD/index-tracked plus non-ignored untracked paths",
         "files": files,
     }
 
