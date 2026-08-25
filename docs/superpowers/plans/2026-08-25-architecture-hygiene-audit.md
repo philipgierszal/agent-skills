@@ -345,4 +345,3 @@ gh repo create philipgierszal/agent-skills --private --source . --remote origin 
 - [ ] **Step 6: Verify publication and installation**
 
 Confirm the remote default branch and HEAD SHA with `gh repo view` and `gh api`, compare it with local `git rev-parse HEAD`, verify `git status --short --branch` is clean and tracking `origin/main`, rerun skill validation from the installed path, and compare installed source files with the committed skill.
-

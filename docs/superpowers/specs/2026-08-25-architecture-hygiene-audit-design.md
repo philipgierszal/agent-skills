@@ -102,4 +102,3 @@ Script tests use Python's standard library and temporary Git repositories. Tests
 - Audit mode never changes target source code.
 - The skill and scripts pass behavioral, structural, and unit validation.
 - The verified skill is installed in the personal Codex skill directory and pushed to `philipgierszal/agent-skills`.
-
