@@ -8,6 +8,7 @@ My Agent Skills collection: original skills I maintain, plus a curated selection
 - **Explore other authors:** [curated upstream selection](docs/curated-skills.md), backed by [catalog.json](catalog.json).
 - **Understand duplication and compatibility:** [skill audit](docs/skill-audit.md).
 - **Grow the collection:** [maintenance and evaluation guide](docs/maintaining-the-collection.md).
+- **Connect the lifecycle:** [proposed development workflow](docs/development-workflow.md), from requirements and ADRs to implementation and security/authorization review.
 
 Upstream references are bookmarks, not bundled installations or claims of authorship. Installing this repository installs only its own `skills/` packages. Each upstream retains its own license.
 
