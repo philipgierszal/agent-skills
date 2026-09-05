@@ -9,6 +9,7 @@ My Agent Skills collection: original skills I maintain, plus a curated selection
 - **Understand duplication and compatibility:** [skill audit](docs/skill-audit.md).
 - **Grow the collection:** [maintenance and evaluation guide](docs/maintaining-the-collection.md).
 - **Connect the lifecycle:** [proposed development workflow](docs/development-workflow.md), from requirements and ADRs to implementation and security/authorization review.
+- **Track corrections:** [audit repairs](docs/skill-repairs.md) and [selected attributed patches](repairs/2026-09-05/README.md).
 
 Upstream references are bookmarks, not bundled installations or claims of authorship. Installing this repository installs only its own `skills/` packages. Each upstream retains its own license.
 
@@ -113,4 +114,4 @@ This is an independently maintained collection, informed by the clear catalogs a
 
 ## License
 
-MIT. See [`LICENSE`](LICENSE).
+Original repository material is MIT; see [`LICENSE`](LICENSE). Third-party derivative [repair patches](repairs/2026-09-05/README.md) retain their separately stated CC-BY-SA-4.0 license and attribution.
