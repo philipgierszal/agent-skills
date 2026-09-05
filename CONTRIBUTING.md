@@ -4,6 +4,8 @@ Thanks for improving these Agent Skills. Small, evidence-backed changes are welc
 
 ## Good contributions
 
+For link-only upstream additions, follow the [collection maintenance guide](docs/maintaining-the-collection.md). Keep third-party packages outside `skills/` unless redistribution, provenance, testing, and maintenance ownership are established. A curated reference does not need a new skill-proposal issue because it does not change an installed skill's behavior.
+
 - Corrections and clearer safety or evidence rules.
 - Deterministic analyzer adapters and reference guidance.
 - Tests for bundled scripts and output contracts.

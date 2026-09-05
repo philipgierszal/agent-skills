@@ -1,9 +1,15 @@
 # Agent Skills
 
-[![Validate](https://github.com/philipgierszal/agent-skills/actions/workflows/validate.yml/badge.svg)](https://github.com/philipgierszal/agent-skills/actions/workflows/validate.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Evidence-first skills that help coding agents audit repositories without turning guesses into deletion advice.
+My Agent Skills collection: original skills I maintain, plus a curated selection of other authors' work with pinned references, selection reasons, and honest validation limits.
+
+- **Use my skills:** the [installable catalog](#skill-catalog) below.
+- **Explore other authors:** [curated upstream selection](docs/curated-skills.md), backed by [catalog.json](catalog.json).
+- **Understand duplication and compatibility:** [skill audit](docs/skill-audit.md).
+- **Grow the collection:** [maintenance and evaluation guide](docs/maintaining-the-collection.md).
+
+Upstream references are bookmarks, not bundled installations or claims of authorship. Installing this repository installs only its own `skills/` packages. Each upstream retains its own license.
 
 ## Install in 30 seconds
 
