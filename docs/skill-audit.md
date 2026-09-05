@@ -1,5 +1,7 @@
 # Skill collection audit — 2026-09-05
 
+This is the original audit snapshot. See the subsequent [repair record](skill-repairs.md) for local corrections, discovery changes and verification limits; upstream references remain unchanged.
+
 The collection contains useful specialist knowledge, repeated installations, incompatible client assumptions, and several reproducible defects. **It is not accurate to say that every installed skill works.** This audit supports a smaller curated selection and identifies the remaining repair and integration gates.
 
 ## Scope and method

@@ -1,0 +1,43 @@
+[
+  {
+    "skill": "supply-chain-risk-auditor",
+    "upstream_repository": "https://github.com/trailofbits/skills",
+    "catalog_revision": "d3323cefbcf645678b8dc481de204b02ad3d02dc",
+    "source_url": "https://github.com/trailofbits/skills/blob/d3323cefbcf645678b8dc481de204b02ad3d02dc/plugins/supply-chain-risk-auditor/skills/supply-chain-risk-auditor/SKILL.md",
+    "license": "CC-BY-SA-4.0",
+    "patch": "supply-chain-risk-auditor.patch",
+    "scope": "Local adaptation; not merged upstream or auto-installed by catalog",
+    "modified_by": "Philip Gierszal and Codex",
+    "modified_on": "2026-09-05",
+    "files": [
+      {
+        "path": "scripts/sources.py",
+        "before_sha256": "18ef6be2ecb3aa594f8786b19a42543cf324cc2054293d3ef5f2449e875677d1",
+        "after_sha256": "8217f5ea81a0eb4f1e1c2080edca0f6262e1ffc4e9c4a5dc31ff6e21e06425a4"
+      },
+      {
+        "path": "scripts/test_windows_cache.py",
+        "before_sha256": null,
+        "after_sha256": "e26d5c83d74f0037a6e96709f646eb418cb5279e478b63c4259816428d162f98"
+      }
+    ]
+  },
+  {
+    "skill": "spec-to-code-compliance",
+    "upstream_repository": "https://github.com/trailofbits/skills",
+    "catalog_revision": "d3323cefbcf645678b8dc481de204b02ad3d02dc",
+    "source_url": "https://github.com/trailofbits/skills/blob/d3323cefbcf645678b8dc481de204b02ad3d02dc/plugins/spec-to-code-compliance/skills/spec-to-code-compliance/SKILL.md",
+    "license": "CC-BY-SA-4.0",
+    "patch": "spec-to-code-compliance.patch",
+    "scope": "Local adaptation; not merged upstream or auto-installed by catalog",
+    "modified_by": "Philip Gierszal and Codex",
+    "modified_on": "2026-09-05",
+    "files": [
+      {
+        "path": "SKILL.md",
+        "before_sha256": "eb0d91b50a9c06f50baf8763d1e23566897b9fa3e7ffcf13134eee4e1ccaefe5",
+        "after_sha256": "1f89c7598bbb6b68cc5e2cd42822f8f423f6320b87f6af7bb0337ed47380a46e"
+      }
+    ]
+  }
+]
