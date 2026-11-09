@@ -1,5 +1,8 @@
 # Repository Guide for Coding Agents
 
+Credentials: before retrieving or provisioning secrets, follow the
+[shared KeePassXC access procedure](https://github.com/philipgierszal/optiguard-procesy/blob/main/docs/dostep-do-sekretow.md).
+
 This repository publishes reusable Agent Skills. Keep the installable boundary small, portable, deterministic, and safe.
 
 ## Before editing
