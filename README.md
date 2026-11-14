@@ -54,6 +54,7 @@ Audit every file in this repository. Map file and symbol relationships, then ide
 | --- | --- | --- | --- | --- |
 | [`architecture-hygiene-audit`](skills/architecture-hygiene-audit/SKILL.md) | Whole-repository dead-code, dependency, structure, and SOLID/SoC/DRY/KISS/YAGNI review | Deterministic inventory, reconciled evidence ledger, calibrated findings, and a human report | Does not change the target source tree; may write audit artifacts outside it | Stable |
 | [`token-usage-review`](skills/token-usage-review/SKILL.md) | Daily or after-batch review of where Claude Code and Codex tokens went, plus which model and effort to use for which job | Markdown report: value, context re-reading, subagent and model share, costliest runs, flags, lines changed; [model and effort guide](skills/token-usage-review/references/model-and-effort.md) | Read-only; reads local transcripts and Git history | Stable |
+| [`process-model-review`](skills/process-model-review/SKILL.md) | Audit documented business processes for coverage, clarity, coherence, system mapping, controls and KPIs against reference models (APQC, SCOR, ITIL) and the systems' real data | Findings per process with severity, a coverage matrix and a top-five summary | Read-only on the processes under review | Stable |
 
 ## What the audit proves
 
