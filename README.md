@@ -53,6 +53,7 @@ Audit every file in this repository. Map file and symbol relationships, then ide
 | Skill | Use it for | Key output | Side effects | Status |
 | --- | --- | --- | --- | --- |
 | [`architecture-hygiene-audit`](skills/architecture-hygiene-audit/SKILL.md) | Whole-repository dead-code, dependency, structure, and SOLID/SoC/DRY/KISS/YAGNI review | Deterministic inventory, reconciled evidence ledger, calibrated findings, and a human report | Does not change the target source tree; may write audit artifacts outside it | Stable |
+| [`token-usage-review`](skills/token-usage-review/SKILL.md) | Daily or after-batch review of where Claude Code and Codex tokens went, plus which model and effort to use for which job | Markdown report: value, context re-reading, subagent and model share, costliest runs, flags, lines changed; [model and effort guide](skills/token-usage-review/references/model-and-effort.md) | Read-only; reads local transcripts and Git history | Stable |
 
 ## What the audit proves
 
