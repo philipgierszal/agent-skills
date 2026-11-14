@@ -48,6 +48,10 @@ It can also be selected implicitly for requests such as:
 Audit every file in this repository. Map file and symbol relationships, then identify dead ends, orphaned files, unused exports, dependency cycles, and violations of our documented architecture rules.
 ```
 
+## Shared working rules
+
+[`agent-instructions/`](agent-instructions/working-rules.md) holds general rules for working with an owner and for spending tokens well, learned from a real project. `python agent-instructions/install.py` writes them into `~/.claude/CLAUDE.md` and `~/.codex/AGENTS.md` between markers, keeps everything else in those files, and links this repository's skills for both agents.
+
 ## Skill catalog
 
 | Skill | Use it for | Key output | Side effects | Status |
