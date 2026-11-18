@@ -4,16 +4,15 @@
    "README.md",
    "AGENTS.md",
    ".gitignore",
-   "*/.gitattributes",
+   "**/.gitattributes",
    "LICENSE",
-   ".github/*",
-   ".github/*/*",
    "tests/test_*.py",
    "skills/*/SKILL.md",
-   "skills/*/agents/*"
+   "skills/*/agents/*",
+   ".github/**"
   ],
   "leaves": [
-   "tests/*"
+   "tests/**"
   ],
   "allowed": []
  }

@@ -44,11 +44,16 @@ DEFAULTS: dict[str, list[str]] = {
     "roots": ["README.md", "AGENTS.md"],
     "leaves": [],
     "module_roots": [],
+    # Pattern and list files name every file; they prove nothing about reachability.
     "not_sources": [
-        ".gitattributes",
-        ".editorconfig",
+        "**/.gitattributes",
+        "**/.editorconfig",
+        "**/.gitignore",
+        "**/*.dockerignore",
         "scripts/code_health_baseline.json",
+        "scripts/orphan_check.py",
         BASELINE,
+        *SETTINGS,
     ],
 }
 TOKEN = re.compile(
@@ -66,8 +71,13 @@ def repository_files(root: Path) -> list[str]:
     """Tracked and untracked non-ignored files; outside Git, every file but .git."""
     command = ["git", "-c", "core.quotePath=false", "ls-files", "-z", "--cached"]
     command += ["--others", "--exclude-standard"]
-    result = subprocess.run(command, cwd=root, capture_output=True, check=False)  # noqa: S603
-    if result.returncode != 0:
+    try:
+        result = subprocess.run(command, cwd=root, capture_output=True, check=False)  # noqa: S603
+    except FileNotFoundError:  # no Git: a plain folder, as in self-tests
+        result = None
+    if result is not None and result.returncode != 0 and (root / ".git").exists():
+        raise SystemExit(f"git ls-files failed: {result.stderr.decode(errors='replace')}")
+    if result is None or result.returncode != 0:
         paths = (p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file())
         return sorted(
             p for p in paths if not {".git", "node_modules"} & set(p.split("/"))
@@ -117,6 +127,8 @@ class Index:
         while token.startswith("./"):
             token = token[2:]
         token = token.lstrip("/")
+        if token.startswith("*") and token.endswith("**"):  # Markdown bold
+            token = token.strip("*")
         options = [token, posixpath.normpath(posixpath.join(folder, token))]
         head = token.split("/", 1)[0]
         if head in self.addon_paths:
@@ -207,8 +219,10 @@ def conventions(path: str, index: Index) -> set[str]:
 
 
 def read_text(root: Path, path: str) -> str | None:
+    if (root / path).stat().st_size > TEXT_LIMIT:
+        return None
     data = (root / path).read_bytes()
-    if len(data) > TEXT_LIMIT or b"\0" in data[:4096]:
+    if b"\0" in data[:4096]:
         return None
     return data.decode("utf-8", errors="replace")
 
