@@ -4,6 +4,7 @@
    "README.md",
    "AGENTS.md",
    ".gitignore",
+   "*/.gitattributes",
    "LICENSE",
    ".github/*",
    ".github/*/*",
