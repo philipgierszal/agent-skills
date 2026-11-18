@@ -40,7 +40,7 @@ jobs:
       - name: Compile Python
         run: python -m compileall -q skills tests
       - name: Check for orphan files
-        run: python scripts/orphans.py
+        run: python scripts/orphan_check.py
       - name: Validate maintained example
         run: >-
           python skills/architecture-hygiene-audit/scripts/validate_ledger.py

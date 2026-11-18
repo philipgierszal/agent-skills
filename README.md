@@ -105,7 +105,7 @@ python -m pip install -r requirements-dev.txt
 python -m unittest discover -s tests -v
 python -m ruff check .
 python -m compileall -q skills tests
-python scripts/orphans.py
+python scripts/orphan_check.py
 python skills/architecture-hygiene-audit/scripts/validate_ledger.py \
   --inventory examples/architecture-hygiene-audit/inventory.json \
   --ledger examples/architecture-hygiene-audit/ledger.json
@@ -113,7 +113,7 @@ python skills/architecture-hygiene-audit/scripts/validate_ledger.py \
 
 Behavioral evaluation evidence: [architecture-hygiene-audit](evals/architecture-hygiene-audit.md) and [token-usage-review](evals/token-usage-review.md). Design and primary-source rationale: research on the [audit skill](docs/research/architecture-hygiene-audit.md), the [development workflow](docs/research/development-workflow.md) and the [repository structure](docs/research/public-skills-repository-structure.md); designs for the [audit skill](docs/superpowers/specs/2026-08-25-architecture-hygiene-audit-design.md) and the [public repository](docs/superpowers/specs/2026-08-26-public-repository-design.md). Executed implementation plans live in Git history.
 
-Every file is reachable from this README through links or named paths (each `skills/<name>/` is an entry point); `python scripts/orphans.py` fails on a file nothing reaches, `--tree` prints the tree, and settings live in `scripts/orphans.json`.
+Every file is reachable from this README through links or named paths (each `skills/<name>/` is an entry point); `python scripts/orphan_check.py` fails on a file nothing reaches, `--tree` prints the tree, and settings live in `scripts/orphan_check.json`.
 
 ## Contributing and security
 
