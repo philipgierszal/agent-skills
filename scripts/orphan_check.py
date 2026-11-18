@@ -76,7 +76,9 @@ def repository_files(root: Path) -> list[str]:
     except FileNotFoundError:  # no Git: a plain folder, as in self-tests
         result = None
     if result is not None and result.returncode != 0 and (root / ".git").exists():
-        raise SystemExit(f"git ls-files failed: {result.stderr.decode(errors='replace')}")
+        raise SystemExit(
+            f"git ls-files failed: {result.stderr.decode(errors='replace')}"
+        )
     if result is None or result.returncode != 0:
         paths = (p.relative_to(root).as_posix() for p in root.rglob("*") if p.is_file())
         return sorted(
