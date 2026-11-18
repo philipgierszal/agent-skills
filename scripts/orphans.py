@@ -1,9 +1,10 @@
 """Orphan-file ratchet: every repository file must be reachable from
 the entry points (README.md by default) through references, so the README is a tree
 that reaches every file. One identical copy per repository; settings live under the
-"orphans" key of scripts/code_health.json, or in scripts/orphans.json without it:
+"orphans" key of scripts/code_health.json or scripts/orphans.json (first one found):
 
-    "orphans": {"roots": [...], "leaves": [...], "allowed": ["path or glob", ...]}
+    "orphans": {"roots": [...], "leaves": [...], "module_roots": ["src"],
+                "allowed": ["path or glob", ...]}
 
 A reference is a Markdown link, a path written in any text file (relative to the file
 or to the repository root, globs included), a unique file name with an extension, or
@@ -28,12 +29,12 @@ import posixpath
 import re
 import subprocess
 import sys
-from collections import defaultdict
+from collections import defaultdict, deque
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 SETTINGS = [ROOT / "scripts" / name for name in ("code_health.json", "orphans.json")]
-TOKEN = re.compile(r"[A-Za-z0-9_.*\-/]+")
+TOKEN = re.compile(r"[\w.*\-/]+")
 TEXT_LIMIT = 2_000_000
 INDEXES = ("README.md", "index.md", "SKILL.md")
 
@@ -77,8 +78,10 @@ class Index:
 
     def resolve(self, token: str, base: str) -> list[str]:
         token = token.strip(",:;'\"`)(").rstrip(".").removeprefix("./")
-        if not token or token.startswith("//"):
+        if not token.strip("*/-") or token.startswith("//"):
             return []
+        if "*" in token and ("/" not in token or "**" in token):
+            return []  # a bare or recursive glob names no particular file
         found: list[str] = []
         for start in {base, ""}:
             candidate = posixpath.normpath(posixpath.join(start, token.lstrip("/")))
@@ -91,8 +94,6 @@ class Index:
         if candidate.startswith("..") or candidate == ".":
             return []
         if "*" in candidate:
-            if "/" not in candidate or "**" in candidate:
-                return []  # a bare or recursive glob names no particular file
             pattern = re.compile(re.escape(candidate).replace(r"\*", "[^/]*") + "$")
             return [f for f in self.files if pattern.match(f)]
         if candidate in self.files:
@@ -107,16 +108,17 @@ def parents(path: str) -> list[str]:
     return ["/".join(parts[: i + 1]) for i in range(len(parts))]
 
 
-def module_files(index: Index) -> dict[str, str]:
-    """Dotted module name -> file, for top-level and src/ layouts."""
+def module_files(index: Index, module_roots: list[str]) -> dict[str, str]:
+    """Dotted module name -> file, from the top level and from each module root."""
     modules: dict[str, str] = {}
-    for path in index.files:
+    for path in sorted(index.files):
         if not path.endswith(".py"):
             continue
         dotted = path.removesuffix(".py").removesuffix("/__init__").replace("/", ".")
         modules[dotted] = path
-        if dotted.startswith("src."):
-            modules[dotted.removeprefix("src.")] = path
+        for root in module_roots:
+            if dotted.startswith(f"{root}."):
+                modules.setdefault(dotted.removeprefix(f"{root}."), path)
     return modules
 
 
@@ -136,9 +138,9 @@ def python_imports(path: str, text: str, modules: dict[str, str]) -> list[str]:
             module = ".".join(p for p in (base, node.module or "") if p)
             names = [module] + [f"{module}.{alias.name}" for alias in node.names]
         for name in names:
-            for candidate in (name, f"src.{name}"):
-                if candidate in modules:
-                    found.append(modules[candidate])
+            name = name.removeprefix("odoo.addons.")  # Odoo add-on import path
+            if name in modules:
+                found.append(modules[name])
     return found
 
 
@@ -152,18 +154,19 @@ def references(path: str, index: Index, modules: dict[str, str]) -> set[str]:
         found = {f for token in TOKEN.findall(text) for f in index.resolve(token, base)}
     if path.endswith(".py"):
         found.update(python_imports(path, text, modules))
-    for target in list(found):
-        found.update(p for d in parents(target) for p in (f"{d}/__init__.py",))
+    for target in [t for t in found if t.endswith(".py")]:
+        found.update(f"{directory}/__init__.py" for directory in parents(target))
     return (found & index.files) - {path}
 
 
-def walk(roots: list[str], index: Index) -> dict[str, str | None]:
+def walk(
+    roots: list[str], index: Index, modules: dict[str, str]
+) -> dict[str, str | None]:
     """Breadth-first reach from the roots; value is the file that first reached it."""
-    modules = module_files(index)
     reached: dict[str, str | None] = dict.fromkeys(roots)
-    queue = list(roots)
+    queue = deque(roots)
     while queue:
-        path = queue.pop(0)
+        path = queue.popleft()
         for target in sorted(references(path, index, modules)):
             if target not in reached:
                 reached[target] = path
@@ -186,16 +189,26 @@ def print_tree(reached: dict[str, str | None]) -> None:
         stack.extend((c, depth + 1) for c in sorted(children[path], reverse=True))
 
 
+def load_settings() -> dict[str, list[str]]:
+    """The "orphans" object of the first settings file that has one."""
+    for path in SETTINGS:
+        if path.is_file():
+            data = json.loads(path.read_text(encoding="utf-8"))
+            if "orphans" in data:
+                return dict(data["orphans"])
+    return {}
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--tree", action="store_true", help="print the reference tree")
     args = parser.parse_args()
-    found = [path for path in SETTINGS if path.is_file()]
-    settings = json.loads(found[0].read_text(encoding="utf-8")) if found else {}
-    settings = settings.get("orphans", {})
+    settings = load_settings()
     files = repository_files()
     roots = [f for f in files if matches(f, settings.get("roots", ["README.md"]))]
-    reached = walk(roots, Index(files, settings.get("leaves", [])))
+    index = Index(files, settings.get("leaves", []))
+    modules = module_files(index, settings.get("module_roots", ["src"]))
+    reached = walk(roots, index, modules)
     if args.tree:
         print_tree(reached)
     allowed = settings.get("allowed", [])
