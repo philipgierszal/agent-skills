@@ -1,0 +1,19 @@
+{
+ "orphans": {
+  "roots": [
+   "README.md",
+   "AGENTS.md",
+   ".gitignore",
+   "LICENSE",
+   ".github/*",
+   ".github/*/*",
+   "tests/test_*.py",
+   "skills/*/SKILL.md",
+   "skills/*/agents/*"
+  ],
+  "leaves": [
+   "tests/*"
+  ],
+  "allowed": []
+ }
+}

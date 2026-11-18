@@ -28,6 +28,7 @@ Run focused tests while editing, then the full contract before handoff:
 python -m unittest discover -s tests -v
 python -m ruff check .
 python -m compileall -q skills tests
+python scripts/orphans.py
 python skills/architecture-hygiene-audit/scripts/validate_ledger.py \
   --inventory examples/architecture-hygiene-audit/inventory.json \
   --ledger examples/architecture-hygiene-audit/ledger.json
