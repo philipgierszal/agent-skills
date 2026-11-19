@@ -19,6 +19,8 @@ Measured on one project (10–14 November 2026): over 99% of tokens went on re-r
 
 - One task per fresh session with a short brief. A planning session writes briefs and reviews results; it doesn't build through its own subagents.
 - Stop at about 100 steps, at the brief's token budget, or after two failed fixes. Report, then split the rest.
+- A planning session hands off to a fresh session at about 150 steps or 250k context, with a written status brief (owner, 2026-11-19).
+- A night or batch slice covers one area with at most about 6 processes; walks and doc sweeps are separate slices (owner, 2026-11-19).
 - Choose the model for the job, and always pass `model` when spawning a subagent:
   - Haiku: searching and reading;
   - Sonnet: mechanical edits and diff reviews;
