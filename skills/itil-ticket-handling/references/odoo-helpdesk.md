@@ -53,7 +53,9 @@ kw('helpdesk.ticket', 'message_post', [ticket_id],
    message_type='comment', subtype_xmlid='mail.mt_note', partner_ids=[])
 ```
 
-`mail.mt_note` is visible to internal users who can read the ticket and notifies nobody. `body_is_html=True` keeps paragraphs and lists (Odoo logs a warning for internal users; harmless). A plain string body is escaped, and its line breaks collapse. Escape any text quoted from the requester with `html.escape`.
+`mail.mt_note` is visible to internal users who can read the ticket and notifies nobody.
+
+**HTML over JSON-RPC.** A string body arrives as a plain `str`, not a `Markup`, so `message_post(body='<p>…</p>')` stores it escaped and the reader sees raw tags (`<p>`, `<ol>`). Either pass `body_is_html=True` with HTML, as in these examples (Odoo logs a warning for internal users; harmless), or send plain text with no tags at all (its line breaks collapse, so keep it to one short paragraph). Never send tags without `body_is_html=True`. Escape any text quoted from the requester with `html.escape` before putting it into an HTML body.
 
 ## Message to the requester
 
@@ -75,7 +77,14 @@ A stage with an e-mail, SMS or rating template sends it to the requester. Check 
 
 ## After writing
 
-Re-read the ticket and its last message to confirm the write landed as intended (stage, subtype, recipients), then run the profile's guard checks.
+Re-read the ticket and the message you just posted to confirm the write landed as intended (stage, subtype, recipients), then run the profile's guard checks.
+
+```python
+msg = kw('mail.message', 'read', [message_id], fields=['body', 'subtype_id', 'partner_ids'])[0]
+assert '&lt;' not in msg['body'], 'body stored escaped: the reader sees raw tags'
+```
+
+`message_post` returns the new message's ID. If the body holds `&lt;`, the reader sees raw tags: post a corrected entry with `body_is_html=True`, and note on the ticket (internally) that the earlier entry was garbled.
 
 ## Fields not to touch without approval
 
