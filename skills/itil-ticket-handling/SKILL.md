@@ -55,6 +55,7 @@ Read the whole ticket: title, description (forms often add the page, record and 
 - **Impact** (how many people or how much money or customer exposure) and **urgency** (how soon work stops or harm grows) give the **priority**, from the table in [ITIL essentials](references/itil-essentials.md#priority). Do not ask the requester for the priority; infer it and ask only when the answer changes it.
 - **Repeat?** Search the register and open tickets for the same symptom. Two or more tickets with one cause: link them and open a *problem* row (see "Problems" below).
 - **Register.** One register row per ask, before any other work, with the ticket number in it. A product change also gets a requirement in the requirements list. Cite both IDs in the internal note.
+- **Owner decides scope.** Register the ticket as "pending owner decision". Create no requirement (FR/NFR) and no feature branch until the system owner decides whether to implement it and how to classify it; clarifying questions to the requester go ahead meanwhile. The requirement above is created only after that decision.
 
 Internal note: `Agent: classified as <type>, priority <P> (impact <x>, urgency <y>). Register <Z-id>; requirement <FR-id or "none">. <one-line analysis>.`
 
