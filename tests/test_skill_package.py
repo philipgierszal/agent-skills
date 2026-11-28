@@ -14,6 +14,17 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / "skills" / "architecture-hygiene-audit"
 EXAMPLE = ROOT / "examples" / "architecture-hygiene-audit"
 VALIDATOR = SKILL / "scripts" / "validate_ledger.py"
+DELIVERY_LEAD = ROOT / "skills" / "delivery-lead"
+DELIVERY_STEPS = (
+    "Intake",
+    "Questions round",
+    "Options note",
+    "Design",
+    "Build or brief",
+    "Verify",
+    "Release",
+    "Board",
+)
 MARKDOWN_LINK = re.compile(r"\[[^]]*\]\(([^)]+)\)")
 
 
@@ -102,6 +113,43 @@ class SkillPackageTests(unittest.TestCase):
                 target = unquote(raw_target.split("#", maxsplit=1)[0])
                 with self.subTest(source=markdown_file, target=target):
                     self.assertTrue((markdown_file.parent / target).exists())
+
+    def test_delivery_lead_links_resolve(self) -> None:
+        markdown_files = sorted(DELIVERY_LEAD.rglob("*.md"))
+        self.assertGreaterEqual(len(markdown_files), 3)
+
+        for markdown_file in markdown_files:
+            text = markdown_file.read_text(encoding="utf-8")
+            for match in MARKDOWN_LINK.finditer(text):
+                raw_target = match.group(1).strip().split(maxsplit=1)[0].strip("<>")
+                if raw_target.startswith(("#", "https://", "http://", "mailto:")):
+                    continue
+                target = unquote(raw_target.split("#", maxsplit=1)[0])
+                with self.subTest(source=markdown_file, target=target):
+                    self.assertTrue((markdown_file.parent / target).exists())
+
+    def test_delivery_lead_path_is_complete_and_ordered(self) -> None:
+        text = (DELIVERY_LEAD / "SKILL.md").read_text(encoding="utf-8")
+        rows = re.findall(r"^\| (\d) \| ([^|]+?) \|", text, flags=re.MULTILINE)
+
+        self.assertEqual(
+            [(str(number), step) for number, step in enumerate(DELIVERY_STEPS, start=1)],
+            rows,
+        )
+        for number, step in enumerate(DELIVERY_STEPS, start=1):
+            with self.subTest(step=step):
+                self.assertIn(f"## {number}. {step}", text)
+
+    def test_delivery_lead_keeps_its_gates(self) -> None:
+        text = (DELIVERY_LEAD / "SKILL.md").read_text(encoding="utf-8")
+
+        self.assertIn("default **3**", text)
+        self.assertIn("in **one** batch", text)
+        self.assertIn("at least two options", text)
+        self.assertIn("never marks it verified", text)
+        self.assertIn("**read-only**", text)
+        self.assertIn("orders the queue itself", text)
+        self.assertTrue((ROOT / "evals" / "delivery-lead.md").is_file())
 
     def test_public_community_files_exist(self) -> None:
         for relative in (
