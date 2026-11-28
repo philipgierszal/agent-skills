@@ -22,6 +22,7 @@ The organisation keeps a short **site profile** outside this skill. Read it befo
 - which writes the agent may make on the ticket without asking (for example: internal notes, messages to the requester, stage changes) and that every other write needs approval;
 - where work is registered (the work register and the requirements list) and how IDs are cited;
 - who approves releases to production, and how the agent reaches them;
+- the owner's decision field on the ticket, if the system has one, and which of its values mean approved;
 - how build work is handed to another session or person;
 - the guard checks to run after any write.
 
@@ -55,7 +56,7 @@ Read the whole ticket: title, description (forms often add the page, record and 
 - **Impact** (how many people or how much money or customer exposure) and **urgency** (how soon work stops or harm grows) give the **priority**, from the table in [ITIL essentials](references/itil-essentials.md#priority). Do not ask the requester for the priority; infer it and ask only when the answer changes it.
 - **Repeat?** Search the register and open tickets for the same symptom. Two or more tickets with one cause: link them and open a *problem* row (see "Problems" below).
 - **Register.** One register row per ask, before any other work, with the ticket number in it. A product change also gets a requirement in the requirements list. Cite both IDs in the internal note.
-- **Owner decides scope.** Register the ticket as "pending owner decision". Create no requirement (FR/NFR) and no feature branch until the system owner decides whether to implement it and how to classify it; clarifying questions to the requester go ahead meanwhile. The requirement above is created only after that decision.
+- **Owner decides scope.** Register the ticket as "pending owner decision". Create no requirement (FR/NFR) and no feature branch until the system owner decides whether to implement it and how to classify it; clarifying questions to the requester go ahead meanwhile. The requirement above is created only after that decision. When the profile names an owner's decision field on the ticket, that field is the gate: read it on every run, build only when it holds an approved value, and never set it yourself (only the owner does).
 
 Internal note: `Agent: classified as <type>, priority <P> (impact <x>, urgency <y>). Register <Z-id>; requirement <FR-id or "none">. <one-line analysis>.`
 

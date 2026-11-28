@@ -86,6 +86,16 @@ assert '&lt;' not in msg['body'], 'body stored escaped: the reader sees raw tags
 
 `message_post` returns the new message's ID. If the body holds `&lt;`, the reader sees raw tags: post a corrected entry with `body_is_html=True`, and note on the ticket (internally) that the earlier entry was garbled.
 
+## Owner's decision field
+
+When the profile names a decision field on the ticket (a selection the owner sets with buttons, for example pending / approved as FR / approved as NFR / rejected), read it with the ticket and treat it as the scope gate:
+
+```python
+decision = kw('helpdesk.ticket', 'read', [ticket_id], fields=['<decision field>'])[0]['<decision field>']
+```
+
+Build, merge or create a requirement only when it holds one of the profile's approved values. The agent never writes it; the server should refuse such a write anyway.
+
 ## Fields not to touch without approval
 
 Assignee, team, priority, tags, customer, SLA, and any record other than the ticket, unless the site profile allows it. Record the suggested priority in the classification note instead.
